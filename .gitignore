@@ -1,0 +1,36 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+*.egg-info/
+dist/
+build/
+*.egg
+
+# Virtual environment
+**/venv/
+**/.venv/
+
+# Database
+*.db
+
+# Environment variables
+.env
+.env.local
+
+# Natapp tunnel
+natapp
+natapp.zip
+natapp_config.ini
+
+# IDE
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+.DS_Store
+Thumbs.db
+
+# Logs
+*.log

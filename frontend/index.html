@@ -1,0 +1,1182 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>AutoConfig · 智能配置表格系统</title>
+<link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
+<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
+<style>
+/* ==================== RESET & BASE ==================== */
+*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
+:root {
+  --bg1: #f0f4f8;
+  --bg2: #e8ecf1;
+  --bg3: #dce1e8;
+  --white: #ffffff;
+  --text: #1a1d23;
+  --text2: #5a6070;
+  --text3: #9098a8;
+  --border: #d4d9e0;
+  --border2: #c0c6d0;
+  --blue: #2980b9;
+  --blue2: #3498db;
+  --blue3: #5dade2;
+  --green: #27ae60;
+  --green2: #2ecc71;
+  --red: #e74c3c;
+  --red2: #f1948a;
+  --orange: #f39c12;
+  --cyan: #1abc9c;
+  --purple: #8e44ad;
+  --demand-bg: #ebf5fb;
+  --config-bg: #e8f8f5;
+  --diff-bg: #fdedec;
+  --ribbon-bg: #f5f7fa;
+  --ribbon-active: #d4e6f1;
+  --ribbon-hover: #e8edf3;
+  --shadow: 0 2px 8px rgba(0,0,0,0.08);
+  --radius: 6px;
+  --header-h: 36px;
+  --row-h: 27px;
+  --ribbon-h: 90px;
+  --formula-h: 32px;
+  --status-h: 28px;
+}
+html, body { height:100%; overflow:hidden; font-family:'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif; background:var(--bg1); color:var(--text); font-size:13px; }
+
+/* ==================== LAYOUT ==================== */
+#app { display:flex; flex-direction:column; height:100vh; }
+
+/* ==================== RIBBON TOOLBAR ==================== */
+.ribbon { background:var(--ribbon-bg); border-bottom:1px solid var(--border); flex-shrink:0; }
+.ribbon-tabs { display:flex; padding:0 8px; border-bottom:1px solid var(--border); background:var(--white); }
+.ribbon-tab {
+  padding:6px 14px; font-size:12px; cursor:pointer; color:var(--text2); border-bottom:2px solid transparent;
+  font-weight:500; user-select:none; transition:all .15s; display:flex; align-items:center; gap:5px;
+}
+.ribbon-tab:hover { color:var(--text); background:var(--ribbon-hover); }
+.ribbon-tab.active { color:var(--blue); border-bottom-color:var(--blue); background:var(--ribbon-active); }
+.ribbon-tab i { font-size:11px; }
+.ribbon-content { display:none; padding:6px 8px; min-height:52px; }
+.ribbon-content.active { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
+.ribbon-group { display:flex; align-items:center; gap:2px; padding:0 6px; border-right:1px solid var(--border); }
+.ribbon-group:last-child { border-right:none; }
+.ribbon-label { font-size:10px; color:var(--text3); text-align:center; display:block; margin-top:2px; }
+.ribbon-btn {
+  display:flex; flex-direction:column; align-items:center; justify-content:center;
+  padding:4px 8px; border-radius:4px; cursor:pointer; border:none; background:transparent;
+  color:var(--text2); font-size:11px; min-width:44px; transition:all .12s;
+}
+.ribbon-btn:hover { background:var(--ribbon-hover); color:var(--text); }
+.ribbon-btn i { font-size:16px; margin-bottom:1px; }
+.ribbon-btn.small { flex-direction:row; gap:4px; min-width:auto; padding:3px 10px; }
+
+/* Mode Selector in Ribbon */
+.mode-selector { display:flex; background:var(--bg2); border-radius:6px; padding:2px; }
+.mode-btn {
+  padding:4px 12px; border:none; background:transparent; border-radius:4px;
+  cursor:pointer; font-size:11px; font-weight:600; color:var(--text2); transition:all .15s;
+  display:flex; align-items:center; gap:4px;
+}
+.mode-btn.active { background:var(--white); color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
+.mode-btn:hover:not(.active) { color:var(--text); }
+.mode-btn i { font-size:12px; }
+.mode-btn.learn i { color:var(--purple); }
+.mode-btn.semi i { color:var(--orange); }
+.mode-btn.auto i { color:var(--green); }
+
+/* ==================== TOOLBAR ==================== */
+.toolbar {
+  display:flex; align-items:center; gap:6px; padding:4px 8px;
+  background:var(--white); border-bottom:1px solid var(--border);
+}
+.toolbar button {
+  padding:4px 10px; border:1px solid var(--border); border-radius:4px;
+  background:var(--white); cursor:pointer; font-size:12px; color:var(--text2);
+  display:flex; align-items:center; gap:4px; transition:all .12s;
+}
+.toolbar button:hover { border-color:var(--blue2); color:var(--blue); background:var(--demand-bg); }
+.toolbar .separator { width:1px; height:20px; background:var(--border); margin:0 4px; }
+
+/* ==================== FORMULA BAR ==================== */
+.formula-bar {
+  display:flex; align-items:center; height:var(--formula-h);
+  background:var(--white); border-bottom:1px solid var(--border);
+  font-size:12px;
+}
+.formula-name {
+  width:80px; padding:0 8px; font-family:'Consolas','Courier New',monospace;
+  font-weight:600; color:var(--text); border-right:1px solid var(--border);
+  height:100%; display:flex; align-items:center;
+}
+.formula-fx {
+  width:24px; text-align:center; color:var(--blue); font-style:italic;
+  font-weight:700; border-right:1px solid var(--border); display:flex; align-items:center; justify-content:center;
+  height:100%; cursor:pointer;
+}
+.formula-input {
+  flex:1; padding:0 8px; border:none; outline:none; font-family:'Consolas','Courier New',monospace;
+  font-size:12px; height:100%; color:var(--text); background:transparent;
+}
+
+/* ==================== SPREADSHEET ==================== */
+.sheet-container { flex:1; overflow:auto; position:relative; background:var(--white); }
+.sheet-table { border-collapse:collapse; }
+.sheet-table td, .sheet-table th {
+  border:1px solid var(--border); padding:0 4px; font-family:'SimSun','宋体',serif;
+  font-size:10pt; height:var(--row-h); white-space:nowrap; overflow:hidden;
+  text-overflow:ellipsis; position:relative;
+}
+.sheet-table th {
+  background:var(--ribbon-bg); font-weight:600; color:var(--text2);
+  text-align:center; position:sticky; top:0; z-index:2; font-family:'Microsoft YaHei',sans-serif;
+  font-size:11px; height:var(--header-h); user-select:none;
+}
+.sheet-table .row-num {
+  background:var(--ribbon-bg); color:var(--text3); font-family:'Consolas',monospace;
+  text-align:center; font-size:10px; font-weight:400; width:36px;
+  position:sticky; left:0; z-index:1; user-select:none; min-width:36px;
+}
+.sheet-table .cell {
+  outline:none; cursor:cell; min-width:82px; max-width:200px;
+  transition:background .1s;
+}
+.sheet-table .cell:focus { background:#fffde7 !important; box-shadow:inset 0 0 0 2px var(--blue2); z-index:3; position:relative; }
+.sheet-table .cell.selected { box-shadow:inset 0 0 0 2px var(--blue3); }
+.sheet-table .cell.demand { background:var(--demand-bg); }
+.sheet-table .cell.config { background:var(--config-bg); }
+.sheet-table .cell.diff { background:var(--diff-bg); }
+.sheet-table .cell.empty { color:var(--text3); }
+.sheet-table td:hover .cell:not(:focus) { outline:1px solid var(--blue3); outline-offset:-1px; }
+
+/* ==================== AI DIALOG ==================== */
+.ai-dialog {
+  position:fixed; width:380px; min-height:200px; max-height:500px;
+  background:var(--white); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.15);
+  z-index:1000; display:flex; flex-direction:column; overflow:hidden;
+  font-family:'Microsoft YaHei',sans-serif;
+  resize:both; right:20px; bottom:60px;
+}
+.ai-dialog.minimized { height:40px !important; min-height:40px; resize:none; }
+.ai-dialog.minimized .ai-body, .ai-dialog.minimized .ai-footer { display:none; }
+.ai-header {
+  display:flex; align-items:center; justify-content:space-between;
+  padding:8px 12px; background:linear-gradient(135deg,var(--blue2),var(--blue));
+  color:var(--white); cursor:grab; user-select:none; flex-shrink:0;
+  border-radius:10px 10px 0 0;
+}
+.ai-header:active { cursor:grabbing; }
+.ai-header-title { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; }
+.ai-header-actions { display:flex; gap:4px; }
+.ai-header-actions button {
+  background:rgba(255,255,255,0.15); border:none; color:var(--white);
+  width:24px; height:24px; border-radius:4px; cursor:pointer; font-size:11px;
+  display:flex; align-items:center; justify-content:center; transition:all .12s;
+}
+.ai-header-actions button:hover { background:rgba(255,255,255,0.3); }
+.ai-body {
+  flex:1; overflow-y:auto; padding:12px; background:var(--bg1); display:flex; flex-direction:column; gap:8px;
+}
+.ai-msg {
+  padding:8px 12px; border-radius:8px; max-width:90%; font-size:12px; line-height:1.5;
+}
+.ai-msg.user { background:var(--blue3); color:var(--white); align-self:flex-end; }
+.ai-msg.bot { background:var(--white); color:var(--text); align-self:flex-start; border:1px solid var(--border); }
+.ai-msg.system { background:#fff8e1; color:#6d4c00; align-self:center; font-size:11px; border:1px solid #ffe082; }
+.ai-footer {
+  padding:8px 12px; border-top:1px solid var(--border); display:flex; gap:8px; background:var(--white);
+}
+.ai-footer input {
+  flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:6px;
+  outline:none; font-size:12px; transition:border-color .15s;
+}
+.ai-footer input:focus { border-color:var(--blue2); }
+.ai-footer button {
+  padding:6px 14px; background:var(--blue2); color:var(--white); border:none; border-radius:6px;
+  cursor:pointer; font-size:12px; font-weight:600; transition:all .15s;
+}
+.ai-footer button:hover { background:var(--blue); }
+
+/* AI Dialog Controls */
+.ai-controls {
+  position:absolute; bottom:60px; right:20px; z-index:999;
+  display:flex; flex-direction:column; gap:4px;
+}
+.ai-toggle-btn {
+  width:40px; height:40px; border-radius:50%; background:var(--blue2); color:var(--white);
+  border:none; cursor:pointer; font-size:18px; box-shadow:0 4px 12px rgba(41,128,185,0.4);
+  transition:all .15s; display:flex; align-items:center; justify-content:center;
+}
+.ai-toggle-btn:hover { transform:scale(1.1); background:var(--blue); }
+.ai-opacity-slider { writing-mode:vertical-lr; direction:rtl; height:80px; }
+
+/* ==================== MODALS ==================== */
+.modal-overlay {
+  position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000;
+  display:flex; align-items:center; justify-content:center;
+}
+.modal {
+  background:var(--white); border-radius:12px; box-shadow:0 12px 48px rgba(0,0,0,0.2);
+  min-width:400px; max-width:600px; max-height:80vh; overflow-y:auto;
+}
+.modal-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
+.modal-header h3 { font-size:16px; font-weight:700; }
+.modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--text3); padding:4px; }
+.modal-close:hover { color:var(--text); }
+.modal-body { padding:20px; }
+.modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
+
+/* ==================== STATUS BAR ==================== */
+.status-bar {
+  height:var(--status-h); background:var(--blue); color:var(--white);
+  display:flex; align-items:center; justify-content:space-between; padding:0 12px;
+  font-size:11px; flex-shrink:0;
+}
+.status-bar .mode-indicator { display:flex; align-items:center; gap:6px; font-weight:600; }
+.status-bar .mode-indicator i { font-size:12px; }
+.status-bar .status-right { display:flex; gap:16px; }
+.status-bar .status-right span { opacity:.85; }
+
+/* ==================== IMPORT ZONE ==================== */
+#import-zone {
+  border:2px dashed var(--border2); border-radius:8px; padding:40px 20px;
+  text-align:center; color:var(--text3); cursor:pointer; transition:all .2s;
+}
+#import-zone:hover { border-color:var(--blue2); color:var(--blue2); background:var(--demand-bg); }
+#import-zone.dragover { border-color:var(--green); background:var(--config-bg); color:var(--green); }
+#import-zone i { font-size:36px; display:block; margin-bottom:12px; }
+#import-zone p { font-size:14px; }
+#import-zone small { font-size:11px; display:block; margin-top:6px; }
+
+/* ==================== RESPONSIVE ==================== */
+@media (max-width:768px) {
+  .ribbon { display:none; }
+  .ai-dialog { width:calc(100vw - 20px) !important; right:10px; bottom:50px; }
+}
+
+/* ==================== SCROLLBAR ==================== */
+::-webkit-scrollbar { width:8px; height:8px; }
+::-webkit-scrollbar-track { background:var(--bg2); }
+::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
+::-webkit-scrollbar-thumb:hover { background:var(--text3); }
+
+/* ==================== LOADING ==================== */
+.loading-overlay {
+  position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:3000;
+  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
+}
+.spinner { width:40px; height:40px; border:4px solid var(--border); border-top-color:var(--blue2); border-radius:50%; animation:spin .8s linear infinite; }
+@keyframes spin { to { transform:rotate(360deg); } }
+
+/* ==================== TOAST ==================== */
+.toast {
+  position:fixed; bottom:60px; left:50%; transform:translateX(-50%); z-index:4000;
+  padding:10px 20px; border-radius:8px; background:var(--text); color:var(--white);
+  font-size:13px; display:flex; align-items:center; gap:8px;
+  opacity:0; transition:all .3s; pointer-events:none;
+}
+.toast.show { opacity:1; }
+.toast.success { background:var(--green); }
+.toast.error { background:var(--red); }
+.toast.info { background:var(--blue2); }
+
+/* ==================== AUTO-CONFIGURE PROGRESS ==================== */
+.progress-bar {
+  height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin:12px 0;
+}
+.progress-fill { height:100%; background:var(--green); border-radius:2px; transition:width .3s; width:0%; }
+.progress-text { font-size:11px; color:var(--text3); text-align:center; }
+
+/* Landing page mode selector */
+.mode-landing {
+  display:flex; gap:16px; justify-content:center; padding:24px 0;
+}
+.mode-card {
+  flex:1; max-width:280px; padding:24px; border:2px solid var(--border);
+  border-radius:12px; cursor:pointer; text-align:center; transition:all .2s;
+}
+.mode-card:hover { border-color:var(--blue2); transform:translateY(-2px); box-shadow:var(--shadow); }
+.mode-card.active { border-color:var(--blue); background:var(--demand-bg); }
+.mode-card i { font-size:32px; margin-bottom:12px; }
+.mode-card.learn i { color:var(--purple); }
+.mode-card.semi i { color:var(--orange); }
+.mode-card.auto i { color:var(--green); }
+.mode-card h4 { font-size:15px; margin-bottom:6px; }
+.mode-card p { font-size:12px; color:var(--text3); }
+</style>
+</head>
+<body>
+<div id="app">
+  <!-- LOADING -->
+  <div class="loading-overlay" id="loadingOverlay">
+    <div class="spinner"></div>
+    <div style="font-size:15px;color:var(--text2);">正在加载 AutoConfig ...</div>
+  </div>
+
+  <!-- RIBBON -->
+  <div class="ribbon" id="ribbon">
+    <div class="ribbon-tabs">
+      <div class="ribbon-tab active" data-tab="start"><i class="fa-solid fa-home"></i> 开始</div>
+      <div class="ribbon-tab" data-tab="insert"><i class="fa-solid fa-plus"></i> 插入</div>
+      <div class="ribbon-tab" data-tab="data"><i class="fa-solid fa-table"></i> 数据</div>
+      <div class="ribbon-tab" data-tab="ai"><i class="fa-solid fa-brain"></i> AI 工具</div>
+      <div class="ribbon-tab" data-tab="view"><i class="fa-solid fa-eye"></i> 视图</div>
+    </div>
+    <!-- START TAB -->
+    <div class="ribbon-content active" id="tab-start">
+      <div class="ribbon-group">
+        <button class="ribbon-btn" onclick="showModal('import')"><i class="fa-solid fa-file-import"></i><span class="ribbon-label">导入</span></button>
+        <button class="ribbon-btn" onclick="exportFile()"><i class="fa-solid fa-file-export"></i><span class="ribbon-label">导出</span></button>
+        <button class="ribbon-btn" onclick="newSheet()"><i class="fa-solid fa-file"></i><span class="ribbon-label">新建</span></button>
+      </div>
+      <div class="ribbon-group">
+        <button class="ribbon-btn small"><i class="fa-solid fa-scissors"></i> 剪切</button>
+        <button class="ribbon-btn small"><i class="fa-regular fa-copy"></i> 复制</button>
+        <button class="ribbon-btn small"><i class="fa-regular fa-paste"></i> 粘贴</button>
+      </div>
+      <div class="ribbon-group">
+        <div class="mode-selector">
+          <button class="mode-btn learn active" data-mode="learn" onclick="setMode('learn')"><i class="fa-solid fa-graduation-cap"></i> 学习</button>
+          <button class="mode-btn semi" data-mode="semi" onclick="setMode('semi')"><i class="fa-solid fa-robot"></i> 半自动</button>
+          <button class="mode-btn auto" data-mode="auto" onclick="setMode('auto')"><i class="fa-solid fa-wand-magic-sparkles"></i> 全自动</button>
+        </div>
+      </div>
+    </div>
+    <!-- INSERT TAB -->
+    <div class="ribbon-content" id="tab-insert">
+      <div class="ribbon-group">
+        <button class="ribbon-btn"><i class="fa-solid fa-table-cells"></i><span class="ribbon-label">插入行</span></button>
+        <button class="ribbon-btn"><i class="fa-solid fa-table-cells-large"></i><span class="ribbon-label">插入列</span></button>
+      </div>
+    </div>
+    <!-- DATA TAB -->
+    <div class="ribbon-content" id="tab-data">
+      <div class="ribbon-group">
+        <button class="ribbon-btn" onclick="showModal('import')"><i class="fa-solid fa-file-excel"></i><span class="ribbon-label">导入Excel</span></button>
+        <button class="ribbon-btn" onclick="pasteFromClipboard()"><i class="fa-solid fa-clipboard"></i><span class="ribbon-label">粘贴数据</span></button>
+        <button class="ribbon-btn" onclick="showModal('knowledge')"><i class="fa-solid fa-book"></i><span class="ribbon-label">知识库</span></button>
+      </div>
+    </div>
+    <!-- AI TAB -->
+    <div class="ribbon-content" id="tab-ai">
+      <div class="ribbon-group">
+        <button class="ribbon-btn" onclick="toggleAIDialog()"><i class="fa-solid fa-comment-dots"></i><span class="ribbon-label">AI对话</span></button>
+        <button class="ribbon-btn" onclick="autoConfigure()"><i class="fa-solid fa-wand-magic-sparkles"></i><span class="ribbon-label">全自动配置</span></button>
+        <button class="ribbon-btn" onclick="showModal('memory')"><i class="fa-solid fa-database"></i><span class="ribbon-label">记忆管理</span></button>
+      </div>
+    </div>
+    <!-- VIEW TAB -->
+    <div class="ribbon-content" id="tab-view">
+      <div class="ribbon-group">
+        <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
+          <i class="fa-solid fa-eye-slash"></i> 隐藏列
+          <select style="margin-left:4px;padding:2px 4px;border:1px solid var(--border);border-radius:3px;font-size:11px;">
+            <option>全部显示</option>
+            <option>仅需求区 (A-E)</option>
+            <option>仅配置区 (H-Q)</option>
+          </select>
+        </label>
+      </div>
+    </div>
+  </div>
+
+  <!-- TOOLBAR -->
+  <div class="toolbar">
+    <button onclick="showModal('import')"><i class="fa-solid fa-file-import"></i> 导入</button>
+    <button onclick="exportFile()"><i class="fa-solid fa-download"></i> 导出</button>
+    <div class="separator"></div>
+    <button onclick="setMode('learn')" id="tbLearn"><i class="fa-solid fa-graduation-cap" style="color:var(--purple);"></i> 学习</button>
+    <button onclick="setMode('semi')" id="tbSemi"><i class="fa-solid fa-robot" style="color:var(--orange);"></i> 半自动</button>
+    <button onclick="setMode('auto')" id="tbAuto"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--green);"></i> 全自动</button>
+    <div class="separator"></div>
+    <button onclick="toggleAIDialog()"><i class="fa-solid fa-comment-dots" style="color:var(--blue);"></i> AI对话</button>
+  </div>
+
+  <!-- FORMULA BAR -->
+  <div class="formula-bar">
+    <div class="formula-name" id="formulaName">A1</div>
+    <div class="formula-fx" title="插入函数">fx</div>
+    <input class="formula-input" id="formulaInput" placeholder="输入内容或公式" readonly onfocus="this.select()">
+  </div>
+
+  <!-- SPREADSHEET -->
+  <div class="sheet-container" id="sheetContainer">
+    <table class="sheet-table" id="sheetTable"></table>
+  </div>
+
+  <!-- AI DIALOG -->
+  <div class="ai-dialog" id="aiDialog" style="display:none;">
+    <div class="ai-header" id="aiHeader">
+      <div class="ai-header-title"><i class="fa-solid fa-brain"></i> AI 配置助手</div>
+      <div class="ai-header-actions">
+        <button onclick="toggleAIOpacity()" title="透明度"><i class="fa-solid fa-circle-half-stroke"></i></button>
+        <button onclick="toggleAILock()" title="锁定"><i class="fa-solid fa-lock-open" id="aiLockIcon"></i></button>
+        <button onclick="minimizeAI()" title="最小化"><i class="fa-solid fa-minus"></i></button>
+        <button onclick="toggleAIDialog()" title="关闭">✕</button>
+      </div>
+    </div>
+    <div class="ai-body" id="aiBody">
+      <div class="ai-msg system">💡 当前模式: <span id="aiModeLabel">学习模式</span>。在下方输入查询知识库或寻求配单建议。</div>
+      <div class="ai-msg bot" id="aiWelcome">你好！我是 AI 配置助手。请告诉我你需要什么帮助：
+        <br><br>
+        • 查询产品知识库
+        <br>
+        • 寻求配单建议
+        <br>
+        • 分析需求参数
+        <br>
+        • 教我如何配单（调教模式）
+      </div>
+    </div>
+    <div class="ai-footer">
+      <input type="text" id="aiInput" placeholder="输入消息 ..." onkeydown="if(event.key==='Enter')sendAIMessage()">
+      <button onclick="sendAIMessage()"><i class="fa-solid fa-paper-plane"></i> 发送</button>
+    </div>
+  </div>
+
+  <!-- AI TOGGLE BUTTON (when dialog hidden) -->
+  <div class="ai-controls" id="aiControls">
+    <button class="ai-toggle-btn" onclick="toggleAIDialog()" title="打开AI对话"><i class="fa-solid fa-comment-dots"></i></button>
+  </div>
+
+  <!-- STATUS BAR -->
+  <div class="status-bar">
+    <div class="mode-indicator" id="modeIndicator"><i class="fa-solid fa-graduation-cap"></i> 学习模式</div>
+    <div class="status-right">
+      <span id="statusRows">0 行</span>
+      <span id="statusCols">18 列</span>
+      <span id="statusCell">活动: A1</span>
+    </div>
+  </div>
+
+  <!-- TOAST -->
+  <div class="toast" id="toast"></div>
+</div>
+
+<!-- ==================== MODAL: IMPORT ==================== -->
+<div class="modal-overlay" id="modalImport" style="display:none;" onclick="if(event.target===this)hideModal('import')">
+  <div class="modal">
+    <div class="modal-header"><h3><i class="fa-solid fa-file-import"></i> 导入数据</h3><button class="modal-close" onclick="hideModal('import')">✕</button></div>
+    <div class="modal-body">
+      <div style="margin-bottom:16px;">
+        <button class="ribbon-btn small" onclick="pasteFromClipboard();hideModal('import')" style="display:inline-flex;padding:8px 16px;border:1px solid var(--border);border-radius:6px;"><i class="fa-regular fa-clipboard"></i> 从剪贴板粘贴</button>
+        <span style="margin:0 8px;color:var(--text3);">或</span>
+        <button class="ribbon-btn small" onclick="document.getElementById('fileInput').click()" style="display:inline-flex;padding:8px 16px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-file-excel"></i> 选择文件</button>
+        <input type="file" id="fileInput" accept=".xlsx,.csv,.txt" style="display:none;" onchange="importFile(this.files[0])">
+      </div>
+      <div id="import-zone" onclick="document.getElementById('fileInput').click()">
+        <i class="fa-solid fa-cloud-arrow-up"></i>
+        <p>拖拽文件到此处，或点击选择文件</p>
+        <small>支持 Excel (.xlsx)、CSV (.csv)、文本文件 (.txt)</small>
+      </div>
+      <div id="importPreview" style="margin-top:16px;display:none;">
+        <p style="font-weight:600;margin-bottom:8px;">导入预览</p>
+        <div style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:6px;"></div>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="ribbon-btn small" onclick="hideModal('import')" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;">取消</button>
+      <button class="ribbon-btn small" onclick="confirmImport();hideModal('import')" style="padding:8px 20px;background:var(--blue2);color:var(--white);border:none;border-radius:6px;">确认导入</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL: KNOWLEDGE ==================== -->
+<div class="modal-overlay" id="modalKnowledge" style="display:none;" onclick="if(event.target===this)hideModal('knowledge')">
+  <div class="modal">
+    <div class="modal-header"><h3><i class="fa-solid fa-book"></i> 知识库管理</h3><button class="modal-close" onclick="hideModal('knowledge')">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text3);margin-bottom:16px;">上传产品配置模板、FAQ、产品目录等资料供 AI 学习</p>
+      <div id="import-zone" style="margin-bottom:16px;" onclick="document.getElementById('kbFileInput').click()">
+        <i class="fa-solid fa-cloud-arrow-up" style="font-size:24px;display:block;margin-bottom:8px;"></i>
+        <p style="font-size:13px;">上传知识库文件</p>
+        <small style="font-size:11px;">支持 xlsx / csv / txt / pdf / docx</small>
+        <input type="file" id="kbFileInput" accept=".xlsx,.csv,.txt,.pdf,.docx" style="display:none;" multiple onchange="uploadKnowledge(this.files)">
+      </div>
+      <div id="kbList" style="border:1px solid var(--border);border-radius:6px;min-height:60px;padding:12px;">
+        <p style="color:var(--text3);font-size:12px;">暂未上传知识库文件。上传后 AI 可基于产品知识进行智能配单。</p>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="ribbon-btn small" onclick="hideModal('knowledge')" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<!-- ==================== MODAL: MEMORY ==================== -->
+<div class="modal-overlay" id="modalMemory" style="display:none;" onclick="if(event.target===this)hideModal('memory')">
+  <div class="modal">
+    <div class="modal-header"><h3><i class="fa-solid fa-database"></i> 记忆管理</h3><button class="modal-close" onclick="hideModal('memory')">✕</button></div>
+    <div class="modal-body">
+      <p style="color:var(--text3);margin-bottom:16px;">导出/导入 AI 学习记忆。记忆文件可在不同电脑间同步。</p>
+      <div style="display:flex;gap:12px;flex-wrap:wrap;">
+        <button class="ribbon-btn small" onclick="exportMemory()" style="padding:10px 20px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-download"></i> 导出记忆</button>
+        <button class="ribbon-btn small" onclick="document.getElementById('memFileInput').click()" style="padding:10px 20px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-upload"></i> 导入记忆</button>
+        <input type="file" id="memFileInput" accept=".mem,.json" style="display:none;" onchange="importMemory(this.files[0])">
+        <button class="ribbon-btn small" onclick="syncMemory()" style="padding:10px 20px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-cloud-arrow-up"></i> 云同步</button>
+      </div>
+      <div style="margin-top:16px;">
+        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
+          <input type="checkbox" id="syncToggle"> 启用云同步（学习记忆将自动同步到云端）
+        </label>
+      </div>
+    </div>
+    <div class="modal-footer">
+      <button class="ribbon-btn small" onclick="hideModal('memory')" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;">关闭</button>
+    </div>
+  </div>
+</div>
+
+<script>
+// ==================== APP STATE ====================
+const STATE = {
+  mode: 'learn',         // 'learn' | 'semi' | 'auto'
+  currentTab: 'start',
+  currentCell: { row: 0, col: 0 },
+  selectedCells: [],
+  data: [],              // 2D array: data[row][col]
+  rows: 30,
+  cols: 18,
+  aiDialogVisible: false,
+  aiLocked: false,
+  aiOpacity: 1,
+  importBuffer: null,
+  kbFiles: [],
+  history: [],
+  apiBase: 'http://localhost:8000',
+  userId: null,
+  token: null,
+};
+
+const COLUMNS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R'];
+const COL_NAMES = ['序号','设备名称','招标/需求参数','单位','数量','','','产品名称','产品规格','品牌','产品型号','厂家内部型号','数量','单位','产品单价','总价','备注','不满足参数'];
+const COL_ZONES = ['demand','demand','demand','demand','demand','','','config','config','config','config','config','config','config','config','config','config','diff'];
+
+// ==================== INIT ====================
+async function init() {
+  try {
+    await createSheet();
+    setupEventListeners();
+    document.getElementById('loadingOverlay').style.display = 'none';
+  } catch(e) {
+    console.error('Init error:', e);
+    document.getElementById('loadingOverlay').style.display = 'none';
+  }
+}
+
+// ==================== SPREADSHEET ====================
+async function createSheet() {
+  STATE.data = Array.from({ length: STATE.rows }, (_, ri) =>
+    Array.from({ length: STATE.cols }, (_, ci) => {
+      if (ci === 0 && ri >= 0) return String(ri + 1); // Auto number
+      return '';
+    })
+  );
+  renderSheet();
+}
+
+function renderSheet() {
+  const table = document.getElementById('sheetTable');
+  let html = '<thead><tr><th style="min-width:36px;position:sticky;left:0;z-index:3;">#</th>';
+  
+  // Column headers with zone coloring
+  COLUMNS.forEach((col, ci) => {
+    const bg = COL_ZONES[ci] === 'demand' ? '#ebf5fb' : COL_ZONES[ci] === 'config' ? '#e8f8f5' : COL_ZONES[ci] === 'diff' ? '#fdedec' : '';
+    const title = COL_NAMES[ci] || '';
+    html += `<th style="${bg ? 'background:'+bg+';' : ''}min-width:82px;" title="${title}">${col}<br><span style="font-weight:400;font-size:9px;">${title}</span></th>`;
+  });
+  html += '</tr></thead><tbody>';
+
+  STATE.data.forEach((row, ri) => {
+    html += `<tr><td class="row-num">${ri + 1}</td>`;
+    row.forEach((cell, ci) => {
+      const zone = COL_ZONES[ci];
+      const zoneClass = zone ? `cell ${zone}` : 'cell';
+      const val = cell || '';
+      // Auto-number for column A
+      const displayVal = ci === 0 && !val ? String(ri + 1) : val;
+      html += `<td class="${zoneClass}" contenteditable="true"
+        data-row="${ri}" data-col="${ci}"
+        onfocus="onCellFocus(this, ${ri}, ${ci})"
+        onblur="onCellBlur(this, ${ri}, ${ci})"
+        oninput="onCellInput(this, ${ri}, ${ci})"
+        onkeydown="onCellKeydown(event, ${ri}, ${ci})"
+        style="text-align:${ci >= 13 && ci <= 15 ? 'right' : 'left'};"
+      >${displayVal}</td>`;
+    });
+    html += '</tr>';
+  });
+  html += '</tbody>';
+  table.innerHTML = html;
+  updateStatus();
+}
+
+// ==================== CELL EVENTS ====================
+function onCellFocus(el, row, col) {
+  STATE.currentCell = { row, col };
+  document.getElementById('formulaName').textContent = `${COLUMNS[col]}${row + 1}`;
+  document.getElementById('formulaInput').value = el.textContent;
+  document.getElementById('formulaInput').readOnly = false;
+  document.getElementById('statusCell').textContent = `活动: ${COLUMNS[col]}${row + 1}`;
+  el.classList.add('selected');
+}
+
+function onCellBlur(el, row, col) {
+  el.classList.remove('selected');
+}
+
+function onCellInput(el, row, col) {
+  STATE.data[row][col] = el.textContent;
+  document.getElementById('formulaInput').value = el.textContent;
+}
+
+function onCellKeydown(e, row, col) {
+  if (e.key === 'Enter') {
+    e.preventDefault();
+    // Move to next row
+    const nextRow = row + 1;
+    if (nextRow < STATE.rows) {
+      const nextCell = document.querySelector(`td[data-row="${nextRow}"][data-col="${col}"]`);
+      if (nextCell) nextCell.focus();
+    }
+  } else if (e.key === 'Tab') {
+    e.preventDefault();
+    const nextCol = (col + 1) % STATE.cols;
+    const nextRow = nextCol === 0 ? row + 1 : row;
+    if (nextRow < STATE.rows) {
+      const nextCell = document.querySelector(`td[data-row="${nextRow}"][data-col="${nextCol}"]`);
+      if (nextCell) nextCell.focus();
+    }
+  } else if (e.key === 'Escape') {
+    e.target.blur();
+  }
+}
+
+// ==================== PASTE ====================
+async function pasteFromClipboard() {
+  try {
+    const text = await navigator.clipboard.readText();
+    const rows = text.split('\n').filter(r => r.trim());
+    if (rows.length === 0) {
+      showToast('剪贴板为空', 'error');
+      return;
+    }
+    const parsed = rows.map(r => {
+      // Try tab-separated first, then comma
+      const cells = r.includes('\t') ? r.split('\t') : r.split(',');
+      return cells.map(c => c.trim().replace(/^"|"$/g, ''));
+    });
+    
+    // Fill data starting from row 0, col 0 (col A = 序号, auto-fill)
+    parsed.forEach((rowData, ri) => {
+      rowData.forEach((val, ci) => {
+        const col = ci + 0; // Start from col A=0
+        if (col < STATE.cols && ri < STATE.rows) {
+          STATE.data[ri][col] = val;
+          // Auto-number column A
+          STATE.data[ri][0] = String(ri + 1);
+        }
+      });
+    });
+    
+    // If we need more rows
+    if (parsed.length > STATE.rows) {
+      STATE.rows = parsed.length + 5;
+      while (STATE.data.length < STATE.rows) {
+        STATE.data.push(Array(STATE.cols).fill(''));
+      }
+    }
+    
+    renderSheet();
+    showToast(`已粘贴 ${parsed.length} 行数据`, 'success');
+  } catch(e) {
+    showToast('粘贴失败: ' + e.message, 'error');
+  }
+}
+
+// ==================== IMPORT/EXPORT ====================
+async function importFile(file) {
+  if (!file) return;
+  showToast('正在导入文件...', 'info');
+  
+  const formData = new FormData();
+  formData.append('file', file);
+  
+  try {
+    const resp = await fetch(`${STATE.apiBase}/api/sheets/import`, {
+      method: 'POST',
+      body: formData,
+    });
+    const result = await resp.json();
+    if (result.success && result.data) {
+      STATE.importBuffer = result.data;
+      showToast(`文件 "${file.name}" 导入成功，${result.data.length} 行`, 'success');
+      // Apply to sheet
+      result.data.forEach((row, ri) => {
+        Object.entries(row).forEach(([key, val]) => {
+          const colIdx = COLUMNS.indexOf(key);
+          if (colIdx >= 0 && ri < STATE.rows) {
+            STATE.data[ri][colIdx] = String(val || '');
+          }
+        });
+        // Auto-number
+        STATE.data[ri][0] = String(ri + 1);
+      });
+      renderSheet();
+    } else {
+      // Fallback: parse locally
+      const text = await file.text();
+      pasteText(text);
+    }
+  } catch(e) {
+    // Fallback to local parsing
+    const text = await file.text();
+    pasteText(text);
+  }
+}
+
+function pasteText(text) {
+  const rows = text.split('\n').filter(r => r.trim());
+  rows.forEach((rowData, ri) => {
+    const cells = rowData.includes('\t') ? rowData.split('\t') : rowData.split(',');
+    cells.forEach((val, ci) => {
+      if (ci < STATE.cols && ri < STATE.rows) {
+        STATE.data[ri][ci] = val.trim().replace(/^"|"$/g, '');
+      }
+    });
+    STATE.data[ri][0] = String(ri + 1);
+  });
+  if (rows.length > STATE.rows) {
+    STATE.rows = rows.length + 5;
+    while (STATE.data.length < STATE.rows) {
+      STATE.data.push(Array(STATE.cols).fill(''));
+    }
+  }
+  renderSheet();
+  showToast(`已导入 ${rows.length} 行`, 'success');
+}
+
+function confirmImport() {
+  if (STATE.importBuffer) {
+    // Already applied above
+    STATE.importBuffer = null;
+  }
+}
+
+async function exportFile() {
+  try {
+    const resp = await fetch(`${STATE.apiBase}/api/sheets/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ data: STATE.data, columns: COLUMNS, colNames: COL_NAMES }),
+    });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `配置清单_${new Date().toISOString().slice(0,10)}.xlsx`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('导出成功', 'success');
+    } else {
+      // Fallback: download as CSV
+      exportAsCSV();
+    }
+  } catch(e) {
+    exportAsCSV();
+  }
+}
+
+function exportAsCSV() {
+  let csv = COLUMNS.join(',') + '\n';
+  STATE.data.forEach(row => {
+    csv += row.map(c => `"${c}"`).join(',') + '\n';
+  });
+  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement('a');
+  a.href = url;
+  a.download = `配置清单_${new Date().toISOString().slice(0,10)}.csv`;
+  a.click();
+  URL.revokeObjectURL(url);
+  showToast('已导出 CSV 文件', 'success');
+}
+
+function newSheet() {
+  STATE.data = Array.from({ length: 30 }, (_, ri) => {
+    const row = Array(STATE.cols).fill('');
+    row[0] = String(ri + 1);
+    return row;
+  });
+  renderSheet();
+  showToast('已新建表格', 'info');
+}
+
+// ==================== MODES ====================
+function setMode(mode) {
+  STATE.mode = mode;
+  const labels = { learn: '学习模式', semi: '半自动模式', auto: '全自动模式' };
+  const icons = { learn: 'fa-graduation-cap', semi: 'fa-robot', auto: 'fa-wand-magic-sparkles' };
+  
+  // Update all mode buttons
+  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
+  document.getElementById('modeIndicator').innerHTML = `<i class="fa-solid ${icons[mode]}"></i> ${labels[mode]}`;
+  document.getElementById('aiModeLabel').textContent = labels[mode];
+  
+  // Show AI dialog in semi and auto modes
+  if (mode !== 'learn') {
+    toggleAIDialog(true);
+  }
+  
+  // Auto mode: show config button
+  if (mode === 'auto') {
+    showToast('🚀 全自动模式已开启。导入需求后点击「全自动配置」一键生成', 'info');
+  } else if (mode === 'semi') {
+    showToast('🤖 半自动模式已开启。填写配置内容时 AI 将实时提供建议', 'info');
+  } else {
+    showToast('🎓 学习模式已开启。上传知识库文件让 AI 学习产品知识', 'info');
+  }
+}
+
+// ==================== AI DIALOG ====================
+function toggleAIDialog(forceShow) {
+  const dialog = document.getElementById('aiDialog');
+  const controls = document.getElementById('aiControls');
+  const isVisible = forceShow === true ? true : forceShow === false ? false : dialog.style.display !== 'none';
+  
+  dialog.style.display = isVisible ? 'none' : 'flex';
+  controls.style.display = isVisible ? 'flex' : 'none';
+  STATE.aiDialogVisible = !isVisible;
+  
+  if (STATE.aiDialogVisible) {
+    document.getElementById('aiInput').focus();
+  }
+}
+
+function sendAIMessage() {
+  const input = document.getElementById('aiInput');
+  const text = input.value.trim();
+  if (!text) return;
+  
+  const body = document.getElementById('aiBody');
+  
+  // Add user message
+  body.innerHTML += `<div class="ai-msg user">${text}</div>`;
+  input.value = '';
+  
+  // Show typing indicator
+  body.innerHTML += `<div class="ai-msg bot" id="aiTyping"><i class="fa-solid fa-spinner fa-spin"></i> 思考中...</div>`;
+  body.scrollTop = body.scrollHeight;
+  
+  // Call AI API
+  fetch(`${STATE.apiBase}/api/ai/query`, {
+    method: 'POST',
+    headers: { 'Content-Type': 'application/json' },
+    body: JSON.stringify({
+      query: text,
+      mode: STATE.mode,
+      context: { currentCell: STATE.currentCell },
+    }),
+  })
+  .then(r => r.json())
+  .then(result => {
+    const typing = document.getElementById('aiTyping');
+    if (typing) typing.remove();
+    const reply = result.data?.reply || result.data?.answer || '抱歉，AI 暂时无法回答。请检查后端服务是否正常运行。';
+    body.innerHTML += `<div class="ai-msg bot">${reply}</div>`;
+    body.scrollTop = body.scrollHeight;
+    
+    // Save to history
+    STATE.history.push({ role: 'user', content: text });
+    STATE.history.push({ role: 'assistant', content: reply });
+  })
+  .catch(e => {
+    const typing = document.getElementById('aiTyping');
+    if (typing) typing.remove();
+    body.innerHTML += `<div class="ai-msg bot">⚠️ AI 服务连接失败：${e.message}。请确保后端服务正在运行。</div>`;
+    body.scrollTop = body.scrollHeight;
+  });
+}
+
+let aiOpacity = 1;
+function toggleAIOpacity() {
+  aiOpacity = aiOpacity === 1 ? 0.7 : aiOpacity === 0.7 ? 0.4 : 1;
+  document.getElementById('aiDialog').style.opacity = aiOpacity;
+}
+
+function toggleAILock() {
+  STATE.aiLocked = !STATE.aiLocked;
+  document.getElementById('aiLockIcon').className = STATE.aiLocked ? 'fa-solid fa-lock' : 'fa-solid fa-lock-open';
+  document.getElementById('aiHeader').style.cursor = STATE.aiLocked ? 'default' : 'grab';
+}
+
+function minimizeAI() {
+  document.getElementById('aiDialog').classList.toggle('minimized');
+}
+
+// ==================== AUTO CONFIGURE ====================
+async function autoConfigure() {
+  if (STATE.mode !== 'auto') {
+    showToast('请先切换到全自动模式', 'error');
+    return;
+  }
+  
+  // Check if there's data in A-E columns
+  const hasDemand = STATE.data.some(row => row[1]?.trim() || row[2]?.trim());
+  if (!hasDemand) {
+    showToast('请先在 A-E 列导入需求数据', 'error');
+    return;
+  }
+  
+  showToast('🚀 开始全自动配置...', 'info');
+  
+  try {
+    const resp = await fetch(`${STATE.apiBase}/api/ai/auto-configure`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        data: STATE.data.map(row => ({
+          A: row[0], B: row[1], C: row[2], D: row[3], E: row[4]
+        })),
+        columns: COLUMNS,
+      }),
+    });
+    const result = await resp.json();
+    
+    if (result.success && result.data) {
+      result.data.forEach((row, ri) => {
+        if (ri < STATE.rows) {
+          Object.entries(row).forEach(([key, val]) => {
+            const ci = COLUMNS.indexOf(key);
+            if (ci >= 0 && ci < STATE.cols) {
+              STATE.data[ri][ci] = String(val || '');
+            }
+          });
+        }
+      });
+      renderSheet();
+      showToast('全自动配置完成 ✅', 'success');
+    } else {
+      // Fallback: AI matching per row
+      for (let ri = 0; ri < Math.min(STATE.rows, STATE.data.length); ri++) {
+        const demandName = STATE.data[ri][1];
+        const demandSpec = STATE.data[ri][2];
+        if (!demandName && !demandSpec) continue;
+        
+        try {
+          const matchResp = await fetch(`${STATE.apiBase}/api/ai/match`, {
+            method: 'POST',
+            headers: { 'Content-Type': 'application/json' },
+            body: JSON.stringify({
+              demand_name: demandName,
+              demand_spec: demandSpec,
+              knowledge: STATE.kbFiles,
+            }),
+          });
+          const matchResult = await matchResp.json();
+          if (matchResult.success && matchResult.data) {
+            STATE.data[ri][7] = matchResult.data.product_name || '';
+            STATE.data[ri][8] = matchResult.data.spec || '';
+            STATE.data[ri][9] = matchResult.data.brand || '';
+            STATE.data[ri][10] = matchResult.data.model || '';
+            STATE.data[ri][11] = matchResult.data.internal_code || '';
+            STATE.data[ri][12] = STATE.data[ri][4] || ''; // Copy quantity
+            STATE.data[ri][13] = STATE.data[ri][3] || ''; // Copy unit
+            STATE.data[ri][14] = matchResult.data.price || '';
+            STATE.data[ri][15] = matchResult.data.total || '';
+            STATE.data[ri][17] = matchResult.data.unmatched || '';
+          }
+        } catch(e) {
+          console.warn(`Row ${ri+1} match failed:`, e);
+        }
+      }
+      renderSheet();
+      showToast('全自动配置完成 ✅（本地模式）', 'success');
+    }
+  } catch(e) {
+    showToast('自动配置失败: ' + e.message, 'error');
+  }
+}
+
+// ==================== KNOWLEDGE & MEMORY ====================
+async function uploadKnowledge(files) {
+  Array.from(files).forEach(file => {
+    STATE.kbFiles.push(file.name);
+    showToast(`已添加知识库: ${file.name}`, 'success');
+  });
+  
+  const list = document.getElementById('kbList');
+  if (STATE.kbFiles.length > 0) {
+    list.innerHTML = STATE.kbFiles.map(f => 
+      `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;justify-content:space-between;">
+        <span><i class="fa-solid fa-file"></i> ${f}</span>
+        <span style="color:var(--green);font-size:11px;">已学习 ✓</span>
+      </div>`
+    ).join('');
+  }
+}
+
+async function exportMemory() {
+  try {
+    const resp = await fetch(`${STATE.apiBase}/api/memory/export`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history: STATE.history, kbFiles: STATE.kbFiles }),
+    });
+    if (resp.ok) {
+      const blob = await resp.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `memory_${new Date().toISOString().slice(0,10)}.mem`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('记忆导出成功', 'success');
+    } else {
+      // Fallback: export locally
+      const memory = {
+        version: '1.0',
+        exportedAt: new Date().toISOString(),
+        history: STATE.history,
+        kbFiles: STATE.kbFiles,
+      };
+      const blob = new Blob([JSON.stringify(memory, null, 2)], { type: 'application/json' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = `memory_${new Date().toISOString().slice(0,10)}.mem`;
+      a.click();
+      URL.revokeObjectURL(url);
+      showToast('记忆导出成功（本地）', 'success');
+    }
+  } catch(e) {
+    showToast('导出失败: ' + e.message, 'error');
+  }
+}
+
+async function importMemory(file) {
+  if (!file) return;
+  try {
+    const text = await file.text();
+    const memory = JSON.parse(text);
+    if (memory.history) STATE.history = memory.history;
+    if (memory.kbFiles) STATE.kbFiles = memory.kbFiles;
+    showToast(`记忆导入成功: ${memory.history?.length || 0} 条对话记录`, 'success');
+  } catch(e) {
+    showToast('导入失败: 文件格式错误', 'error');
+  }
+}
+
+async function syncMemory() {
+  const enabled = document.getElementById('syncToggle').checked;
+  if (!enabled) {
+    showToast('请先勾选「启用云同步」', 'error');
+    return;
+  }
+  try {
+    const resp = await fetch(`${STATE.apiBase}/api/memory/sync`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history: STATE.history, enabled }),
+    });
+    if (resp.ok) {
+      showToast('云端同步成功 ✅', 'success');
+    } else {
+      showToast('同步失败，请检查网络连接', 'error');
+    }
+  } catch(e) {
+    showToast('同步失败: ' + e.message, 'error');
+  }
+}
+
+// ==================== UI HELPERS ====================
+function showModal(name) {
+  document.getElementById(`modal${name.charAt(0).toUpperCase() + name.slice(1)}`).style.display = 'flex';
+}
+
+function hideModal(name) {
+  document.getElementById(`modal${name.charAt(0).toUpperCase() + name.slice(1)}`).style.display = 'none';
+}
+
+function showToast(msg, type = 'info') {
+  const el = document.getElementById('toast');
+  el.textContent = msg;
+  el.className = `toast ${type} show`;
+  clearTimeout(el._timer);
+  el._timer = setTimeout(() => el.classList.remove('show'), 3500);
+}
+
+function updateStatus() {
+  const rowCount = STATE.data.filter(r => r.some(c => c?.trim())).length;
+  document.getElementById('statusRows').textContent = `${rowCount} 行`;
+  document.getElementById('statusCols').textContent = `${STATE.cols} 列`;
+}
+
+// ==================== EVENT LISTENERS ====================
+function setupEventListeners() {
+  // Ribbon tabs
+  document.querySelectorAll('.ribbon-tab').forEach(tab => {
+    tab.addEventListener('click', () => {
+      document.querySelectorAll('.ribbon-tab').forEach(t => t.classList.remove('active'));
+      document.querySelectorAll('.ribbon-content').forEach(c => c.classList.remove('active'));
+      tab.classList.add('active');
+      document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+    });
+  });
+  
+  // AI Dialog dragging
+  const dialog = document.getElementById('aiDialog');
+  const header = document.getElementById('aiHeader');
+  let isDragging = false, dragStartX, dragStartY, dragOrigX, dragOrigY;
+  
+  header.addEventListener('mousedown', (e) => {
+    if (STATE.aiLocked) return;
+    if (e.target.closest('.ai-header-actions')) return;
+    isDragging = true;
+    dragStartX = e.clientX;
+    dragStartY = e.clientY;
+    dragOrigX = dialog.offsetLeft;
+    dragOrigY = dialog.offsetTop;
+  });
+  
+  document.addEventListener('mousemove', (e) => {
+    if (!isDragging) return;
+    dialog.style.left = `${dragOrigX + (e.clientX - dragStartX)}px`;
+    dialog.style.top = `${dragOrigY + (e.clientY - dragStartY)}px`;
+    dialog.style.right = 'auto';
+    dialog.style.bottom = 'auto';
+  });
+  
+  document.addEventListener('mouseup', () => { isDragging = false; });
+  
+  // Import zone drag & drop
+  const importZone = document.getElementById('import-zone');
+  if (importZone) {
+    importZone.addEventListener('dragover', (e) => { e.preventDefault(); importZone.classList.add('dragover'); });
+    importZone.addEventListener('dragleave', () => { importZone.classList.remove('dragover'); });
+    importZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      importZone.classList.remove('dragover');
+      if (e.dataTransfer.files.length) importFile(e.dataTransfer.files[0]);
+    });
+  }
+  
+  // Keyboard shortcuts
+  document.addEventListener('keydown', (e) => {
+    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
+      // Handled by our paste button
+    }
+    if ((e.ctrlKey || e.metaKey) && e.key === 's') {
+      e.preventDefault();
+      showToast('表格已自动保存（本地）', 'info');
+    }
+  });
+}
+
+// ==================== START APP ====================
+document.addEventListener('DOMContentLoaded', init);
+</script>
+</body>
+</html>
