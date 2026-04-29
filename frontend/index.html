@@ -3,539 +3,427 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>AutoConfig · 智能配置表格系统</title>
+<title>AutoConfig · 智能配置表格系统 v0.2.0</title>
 <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.1/css/all.min.css">
-<link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>📋</text></svg>">
 <style>
-/* ==================== RESET & BASE ==================== */
-*, *::before, *::after { margin:0; padding:0; box-sizing:border-box; }
-:root {
-  --bg1: #f0f4f8;
-  --bg2: #e8ecf1;
-  --bg3: #dce1e8;
-  --white: #ffffff;
-  --text: #1a1d23;
-  --text2: #5a6070;
-  --text3: #9098a8;
-  --border: #d4d9e0;
-  --border2: #c0c6d0;
-  --blue: #2980b9;
-  --blue2: #3498db;
-  --blue3: #5dade2;
-  --green: #27ae60;
-  --green2: #2ecc71;
-  --red: #e74c3c;
-  --red2: #f1948a;
-  --orange: #f39c12;
-  --cyan: #1abc9c;
-  --purple: #8e44ad;
-  --demand-bg: #ebf5fb;
-  --config-bg: #e8f8f5;
-  --diff-bg: #fdedec;
-  --ribbon-bg: #f5f7fa;
-  --ribbon-active: #d4e6f1;
-  --ribbon-hover: #e8edf3;
-  --shadow: 0 2px 8px rgba(0,0,0,0.08);
-  --radius: 6px;
-  --header-h: 36px;
-  --row-h: 27px;
-  --ribbon-h: 90px;
-  --formula-h: 32px;
-  --status-h: 28px;
-}
-html, body { height:100%; overflow:hidden; font-family:'Microsoft YaHei','PingFang SC','Segoe UI',sans-serif; background:var(--bg1); color:var(--text); font-size:13px; }
-
-/* ==================== LAYOUT ==================== */
-#app { display:flex; flex-direction:column; height:100vh; }
-
-/* ==================== RIBBON TOOLBAR ==================== */
-.ribbon { background:var(--ribbon-bg); border-bottom:1px solid var(--border); flex-shrink:0; }
-.ribbon-tabs { display:flex; padding:0 8px; border-bottom:1px solid var(--border); background:var(--white); }
-.ribbon-tab {
-  padding:6px 14px; font-size:12px; cursor:pointer; color:var(--text2); border-bottom:2px solid transparent;
-  font-weight:500; user-select:none; transition:all .15s; display:flex; align-items:center; gap:5px;
-}
-.ribbon-tab:hover { color:var(--text); background:var(--ribbon-hover); }
-.ribbon-tab.active { color:var(--blue); border-bottom-color:var(--blue); background:var(--ribbon-active); }
-.ribbon-tab i { font-size:11px; }
-.ribbon-content { display:none; padding:6px 8px; min-height:52px; }
-.ribbon-content.active { display:flex; align-items:center; gap:4px; flex-wrap:wrap; }
-.ribbon-group { display:flex; align-items:center; gap:2px; padding:0 6px; border-right:1px solid var(--border); }
-.ribbon-group:last-child { border-right:none; }
-.ribbon-label { font-size:10px; color:var(--text3); text-align:center; display:block; margin-top:2px; }
-.ribbon-btn {
-  display:flex; flex-direction:column; align-items:center; justify-content:center;
-  padding:4px 8px; border-radius:4px; cursor:pointer; border:none; background:transparent;
-  color:var(--text2); font-size:11px; min-width:44px; transition:all .12s;
-}
-.ribbon-btn:hover { background:var(--ribbon-hover); color:var(--text); }
-.ribbon-btn i { font-size:16px; margin-bottom:1px; }
-.ribbon-btn.small { flex-direction:row; gap:4px; min-width:auto; padding:3px 10px; }
-
-/* Mode Selector in Ribbon */
-.mode-selector { display:flex; background:var(--bg2); border-radius:6px; padding:2px; }
-.mode-btn {
-  padding:4px 12px; border:none; background:transparent; border-radius:4px;
-  cursor:pointer; font-size:11px; font-weight:600; color:var(--text2); transition:all .15s;
-  display:flex; align-items:center; gap:4px;
-}
-.mode-btn.active { background:var(--white); color:var(--blue); box-shadow:0 1px 3px rgba(0,0,0,0.1); }
-.mode-btn:hover:not(.active) { color:var(--text); }
-.mode-btn i { font-size:12px; }
-.mode-btn.learn i { color:var(--purple); }
-.mode-btn.semi i { color:var(--orange); }
-.mode-btn.auto i { color:var(--green); }
-
-/* ==================== TOOLBAR ==================== */
-.toolbar {
-  display:flex; align-items:center; gap:6px; padding:4px 8px;
-  background:var(--white); border-bottom:1px solid var(--border);
-}
-.toolbar button {
-  padding:4px 10px; border:1px solid var(--border); border-radius:4px;
-  background:var(--white); cursor:pointer; font-size:12px; color:var(--text2);
-  display:flex; align-items:center; gap:4px; transition:all .12s;
-}
-.toolbar button:hover { border-color:var(--blue2); color:var(--blue); background:var(--demand-bg); }
-.toolbar .separator { width:1px; height:20px; background:var(--border); margin:0 4px; }
-
-/* ==================== FORMULA BAR ==================== */
-.formula-bar {
-  display:flex; align-items:center; height:var(--formula-h);
-  background:var(--white); border-bottom:1px solid var(--border);
-  font-size:12px;
-}
-.formula-name {
-  width:80px; padding:0 8px; font-family:'Consolas','Courier New',monospace;
-  font-weight:600; color:var(--text); border-right:1px solid var(--border);
-  height:100%; display:flex; align-items:center;
-}
-.formula-fx {
-  width:24px; text-align:center; color:var(--blue); font-style:italic;
-  font-weight:700; border-right:1px solid var(--border); display:flex; align-items:center; justify-content:center;
-  height:100%; cursor:pointer;
-}
-.formula-input {
-  flex:1; padding:0 8px; border:none; outline:none; font-family:'Consolas','Courier New',monospace;
-  font-size:12px; height:100%; color:var(--text); background:transparent;
-}
-
-/* ==================== SPREADSHEET ==================== */
-.sheet-container { flex:1; overflow:auto; position:relative; background:var(--white); }
-.sheet-table { border-collapse:collapse; }
-.sheet-table td, .sheet-table th {
-  border:1px solid var(--border); padding:0 4px; font-family:'SimSun','宋体',serif;
-  font-size:10pt; height:var(--row-h); white-space:nowrap; overflow:hidden;
-  text-overflow:ellipsis; position:relative;
-}
-.sheet-table th {
-  background:var(--ribbon-bg); font-weight:600; color:var(--text2);
-  text-align:center; position:sticky; top:0; z-index:2; font-family:'Microsoft YaHei',sans-serif;
-  font-size:11px; height:var(--header-h); user-select:none;
-}
-.sheet-table .row-num {
-  background:var(--ribbon-bg); color:var(--text3); font-family:'Consolas',monospace;
-  text-align:center; font-size:10px; font-weight:400; width:36px;
-  position:sticky; left:0; z-index:1; user-select:none; min-width:36px;
-}
-.sheet-table .cell {
-  outline:none; cursor:cell; min-width:82px; max-width:200px;
-  transition:background .1s;
-}
-.sheet-table .cell:focus { background:#fffde7 !important; box-shadow:inset 0 0 0 2px var(--blue2); z-index:3; position:relative; }
-.sheet-table .cell.selected { box-shadow:inset 0 0 0 2px var(--blue3); }
-.sheet-table .cell.demand { background:var(--demand-bg); }
-.sheet-table .cell.config { background:var(--config-bg); }
-.sheet-table .cell.diff { background:var(--diff-bg); }
-.sheet-table .cell.empty { color:var(--text3); }
-.sheet-table td:hover .cell:not(:focus) { outline:1px solid var(--blue3); outline-offset:-1px; }
-
-/* ==================== AI DIALOG ==================== */
-.ai-dialog {
-  position:fixed; width:380px; min-height:200px; max-height:500px;
-  background:var(--white); border-radius:10px; box-shadow:0 8px 32px rgba(0,0,0,0.15);
-  z-index:1000; display:flex; flex-direction:column; overflow:hidden;
-  font-family:'Microsoft YaHei',sans-serif;
-  resize:both; right:20px; bottom:60px;
-}
-.ai-dialog.minimized { height:40px !important; min-height:40px; resize:none; }
-.ai-dialog.minimized .ai-body, .ai-dialog.minimized .ai-footer { display:none; }
-.ai-header {
-  display:flex; align-items:center; justify-content:space-between;
-  padding:8px 12px; background:linear-gradient(135deg,var(--blue2),var(--blue));
-  color:var(--white); cursor:grab; user-select:none; flex-shrink:0;
-  border-radius:10px 10px 0 0;
-}
-.ai-header:active { cursor:grabbing; }
-.ai-header-title { display:flex; align-items:center; gap:6px; font-size:13px; font-weight:600; }
-.ai-header-actions { display:flex; gap:4px; }
-.ai-header-actions button {
-  background:rgba(255,255,255,0.15); border:none; color:var(--white);
-  width:24px; height:24px; border-radius:4px; cursor:pointer; font-size:11px;
-  display:flex; align-items:center; justify-content:center; transition:all .12s;
-}
-.ai-header-actions button:hover { background:rgba(255,255,255,0.3); }
-.ai-body {
-  flex:1; overflow-y:auto; padding:12px; background:var(--bg1); display:flex; flex-direction:column; gap:8px;
-}
-.ai-msg {
-  padding:8px 12px; border-radius:8px; max-width:90%; font-size:12px; line-height:1.5;
-}
-.ai-msg.user { background:var(--blue3); color:var(--white); align-self:flex-end; }
-.ai-msg.bot { background:var(--white); color:var(--text); align-self:flex-start; border:1px solid var(--border); }
-.ai-msg.system { background:#fff8e1; color:#6d4c00; align-self:center; font-size:11px; border:1px solid #ffe082; }
-.ai-footer {
-  padding:8px 12px; border-top:1px solid var(--border); display:flex; gap:8px; background:var(--white);
-}
-.ai-footer input {
-  flex:1; padding:6px 10px; border:1px solid var(--border); border-radius:6px;
-  outline:none; font-size:12px; transition:border-color .15s;
-}
-.ai-footer input:focus { border-color:var(--blue2); }
-.ai-footer button {
-  padding:6px 14px; background:var(--blue2); color:var(--white); border:none; border-radius:6px;
-  cursor:pointer; font-size:12px; font-weight:600; transition:all .15s;
-}
-.ai-footer button:hover { background:var(--blue); }
-
-/* AI Dialog Controls */
-.ai-controls {
-  position:absolute; bottom:60px; right:20px; z-index:999;
-  display:flex; flex-direction:column; gap:4px;
-}
-.ai-toggle-btn {
-  width:40px; height:40px; border-radius:50%; background:var(--blue2); color:var(--white);
-  border:none; cursor:pointer; font-size:18px; box-shadow:0 4px 12px rgba(41,128,185,0.4);
-  transition:all .15s; display:flex; align-items:center; justify-content:center;
-}
-.ai-toggle-btn:hover { transform:scale(1.1); background:var(--blue); }
-.ai-opacity-slider { writing-mode:vertical-lr; direction:rtl; height:80px; }
-
-/* ==================== MODALS ==================== */
-.modal-overlay {
-  position:fixed; inset:0; background:rgba(0,0,0,0.4); z-index:2000;
-  display:flex; align-items:center; justify-content:center;
-}
-.modal {
-  background:var(--white); border-radius:12px; box-shadow:0 12px 48px rgba(0,0,0,0.2);
-  min-width:400px; max-width:600px; max-height:80vh; overflow-y:auto;
-}
-.modal-header { padding:16px 20px; border-bottom:1px solid var(--border); display:flex; justify-content:space-between; align-items:center; }
-.modal-header h3 { font-size:16px; font-weight:700; }
-.modal-close { background:none; border:none; font-size:20px; cursor:pointer; color:var(--text3); padding:4px; }
-.modal-close:hover { color:var(--text); }
-.modal-body { padding:20px; }
-.modal-footer { padding:12px 20px; border-top:1px solid var(--border); display:flex; justify-content:flex-end; gap:8px; }
-
-/* ==================== STATUS BAR ==================== */
-.status-bar {
-  height:var(--status-h); background:var(--blue); color:var(--white);
-  display:flex; align-items:center; justify-content:space-between; padding:0 12px;
-  font-size:11px; flex-shrink:0;
-}
-.status-bar .mode-indicator { display:flex; align-items:center; gap:6px; font-weight:600; }
-.status-bar .mode-indicator i { font-size:12px; }
-.status-bar .status-right { display:flex; gap:16px; }
-.status-bar .status-right span { opacity:.85; }
-
-/* ==================== IMPORT ZONE ==================== */
-#import-zone {
-  border:2px dashed var(--border2); border-radius:8px; padding:40px 20px;
-  text-align:center; color:var(--text3); cursor:pointer; transition:all .2s;
-}
-#import-zone:hover { border-color:var(--blue2); color:var(--blue2); background:var(--demand-bg); }
-#import-zone.dragover { border-color:var(--green); background:var(--config-bg); color:var(--green); }
-#import-zone i { font-size:36px; display:block; margin-bottom:12px; }
-#import-zone p { font-size:14px; }
-#import-zone small { font-size:11px; display:block; margin-top:6px; }
-
-/* ==================== RESPONSIVE ==================== */
-@media (max-width:768px) {
-  .ribbon { display:none; }
-  .ai-dialog { width:calc(100vw - 20px) !important; right:10px; bottom:50px; }
-}
-
-/* ==================== SCROLLBAR ==================== */
-::-webkit-scrollbar { width:8px; height:8px; }
-::-webkit-scrollbar-track { background:var(--bg2); }
-::-webkit-scrollbar-thumb { background:var(--border2); border-radius:4px; }
-::-webkit-scrollbar-thumb:hover { background:var(--text3); }
-
-/* ==================== LOADING ==================== */
-.loading-overlay {
-  position:fixed; inset:0; background:rgba(255,255,255,0.8); z-index:3000;
-  display:flex; align-items:center; justify-content:center; flex-direction:column; gap:16px;
-}
-.spinner { width:40px; height:40px; border:4px solid var(--border); border-top-color:var(--blue2); border-radius:50%; animation:spin .8s linear infinite; }
-@keyframes spin { to { transform:rotate(360deg); } }
-
-/* ==================== TOAST ==================== */
-.toast {
-  position:fixed; bottom:60px; left:50%; transform:translateX(-50%); z-index:4000;
-  padding:10px 20px; border-radius:8px; background:var(--text); color:var(--white);
-  font-size:13px; display:flex; align-items:center; gap:8px;
-  opacity:0; transition:all .3s; pointer-events:none;
-}
-.toast.show { opacity:1; }
-.toast.success { background:var(--green); }
-.toast.error { background:var(--red); }
-.toast.info { background:var(--blue2); }
-
-/* ==================== AUTO-CONFIGURE PROGRESS ==================== */
-.progress-bar {
-  height:4px; background:var(--border); border-radius:2px; overflow:hidden; margin:12px 0;
-}
-.progress-fill { height:100%; background:var(--green); border-radius:2px; transition:width .3s; width:0%; }
-.progress-text { font-size:11px; color:var(--text3); text-align:center; }
-
-/* Landing page mode selector */
-.mode-landing {
-  display:flex; gap:16px; justify-content:center; padding:24px 0;
-}
-.mode-card {
-  flex:1; max-width:280px; padding:24px; border:2px solid var(--border);
-  border-radius:12px; cursor:pointer; text-align:center; transition:all .2s;
-}
-.mode-card:hover { border-color:var(--blue2); transform:translateY(-2px); box-shadow:var(--shadow); }
-.mode-card.active { border-color:var(--blue); background:var(--demand-bg); }
-.mode-card i { font-size:32px; margin-bottom:12px; }
-.mode-card.learn i { color:var(--purple); }
-.mode-card.semi i { color:var(--orange); }
-.mode-card.auto i { color:var(--green); }
-.mode-card h4 { font-size:15px; margin-bottom:6px; }
-.mode-card p { font-size:12px; color:var(--text3); }
+:root{--primary:#2563eb;--primary-light:#3b82f6;--primary-dark:#1d4ed8;--primary-bg:#eff6ff;--sidebar-bg:#1e293b;--sidebar-text:#94a3b8;--bg:#f1f5f9;--bg2:#e2e8f0;--white:#fff;--text:#0f172a;--text2:#475569;--text3:#94a3b8;--border:#cbd5e1;--border2:#e2e8f0;--green:#10b981;--red:#ef4444;--orange:#f59e0b;--purple:#8b5cf6;--demand-bg:#eff6ff;--config-bg:#ecfdf5;--diff-bg:#fef2f2;--ribbon-bg:#f8fafc;--ribbon-active:#dbeafe;--shadow:0 1px 3px rgba(0,0,0,0.08);--shadow-lg:0 10px 25px rgba(0,0,0,0.12);--radius:6px;--radius-lg:12px;--header-h:36px;--row-h:27px;--formula-h:32px;--status-h:28px;--sidebar-w:240px;--transition:all .15s ease}
+*,*::before,*::after{margin:0;padding:0;box-sizing:border-box}
+html,body{height:100%;overflow:hidden;font-family:Segoe UI,PingFang SC,Microsoft YaHei,sans-serif;background:var(--bg);color:var(--text);font-size:13px}
+::-webkit-scrollbar{width:6px}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+.login-page{display:flex;align-items:center;justify-content:center;min-height:100vh;background:linear-gradient(135deg,#0f172a,#1e293b,#0f172a);position:relative;overflow:hidden}
+.login-page::before{content:'';position:absolute;inset:0;background:radial-gradient(ellipse at 20% 50%,rgba(59,130,246,0.1) 0%,transparent 60%),radial-gradient(ellipse at 80% 20%,rgba(139,92,246,0.08) 0%,transparent 50%)}
+.login-card{position:relative;z-index:1;width:420px;background:rgba(255,255,255,0.05);backdrop-filter:blur(20px);border:1px solid rgba(255,255,255,0.1);border-radius:20px;padding:40px;box-shadow:0 25px 60px rgba(0,0,0,0.3)}
+.login-logo{text-align:center;margin-bottom:32px}
+.login-logo .icon{width:56px;height:56px;background:linear-gradient(135deg,var(--primary),var(--purple));border-radius:16px;display:inline-flex;align-items:center;justify-content:center;font-size:24px;color:#fff;margin-bottom:12px}
+.login-logo h1{font-size:22px;font-weight:700;color:#fff}
+.login-logo p{font-size:13px;color:var(--sidebar-text)}
+.login-tabs{display:flex;background:rgba(255,255,255,0.05);border-radius:10px;padding:3px;margin-bottom:24px}
+.login-tab{flex:1;padding:8px;text-align:center;border:none;background:transparent;color:var(--sidebar-text);font-size:13px;border-radius:8px;cursor:pointer;transition:var(--transition)}
+.login-tab.active{background:rgba(59,130,246,0.2);color:#fff}
+.login-field{margin-bottom:16px}
+.login-field label{display:block;font-size:12px;color:var(--sidebar-text);margin-bottom:6px}
+.login-field input{width:100%;padding:10px 14px;background:rgba(255,255,255,0.06);border:1px solid rgba(255,255,255,0.1);border-radius:10px;color:#fff;font-size:14px;outline:none;transition:var(--transition)}
+.login-field input:focus{border-color:var(--primary)}
+.login-btn{width:100%;padding:11px;border:none;border-radius:10px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;font-size:15px;font-weight:600;cursor:pointer;transition:var(--transition);margin-top:8px}
+.login-btn:hover{transform:translateY(-1px);box-shadow:0 4px 15px rgba(37,99,235,0.3)}
+.login-error{text-align:center;color:var(--red);font-size:12px;margin-top:8px;min-height:18px}
+.app-layout{display:flex;height:100vh}
+.sidebar{width:var(--sidebar-w);background:var(--sidebar-bg);display:flex;flex-direction:column;flex-shrink:0;z-index:100}
+.sidebar-logo{padding:20px 20px 16px;display:flex;align-items:center;gap:10px;border-bottom:1px solid rgba(255,255,255,0.06)}
+.sidebar-logo .icon{width:36px;height:36px;background:linear-gradient(135deg,var(--primary),var(--purple));border-radius:10px;display:flex;align-items:center;justify-content:center;font-size:16px;color:#fff}
+.sidebar-logo .text h3{font-size:15px;font-weight:700;color:#fff}
+.sidebar-logo .text span{font-size:10px;color:var(--sidebar-text)}
+.sidebar-nav{flex:1;padding:12px 10px;overflow-y:auto}
+.sidebar-section{font-size:10px;color:var(--sidebar-text);text-transform:uppercase;letter-spacing:1px;padding:8px 10px 4px;opacity:0.6}
+.sidebar-item{display:flex;align-items:center;gap:10px;padding:9px 12px;margin:2px 0;border-radius:8px;cursor:pointer;transition:var(--transition);color:var(--sidebar-text);font-size:13px}
+.sidebar-item:hover{background:rgba(255,255,255,0.06);color:#e2e8f0}
+.sidebar-item.active{background:rgba(59,130,246,0.12);color:var(--primary);font-weight:500}
+.sidebar-footer{border-top:1px solid rgba(255,255,255,0.06);padding:10px}
+.sidebar-user{display:flex;align-items:center;gap:10px;padding:8px 10px;border-radius:8px}
+.sidebar-user .avatar{width:28px;height:28px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--purple));display:flex;align-items:center;justify-content:center;color:#fff;font-size:11px;font-weight:600}
+.sidebar-user .name{flex:1;font-size:12px;color:#e2e8f0}
+.sidebar-user .logout-btn{background:none;border:none;color:var(--sidebar-text);cursor:pointer;font-size:12px;padding:4px;border-radius:4px}
+.sidebar-user .logout-btn:hover{color:var(--red)}
+.main-area{flex:1;display:flex;flex-direction:column;overflow:hidden}
+.page-header{padding:20px 32px 12px;background:var(--white);border-bottom:1px solid var(--border2)}
+.page-header h2{font-size:20px;font-weight:700}
+.page-header p{font-size:13px;color:var(--text3);margin-top:2px}
+.page-content{flex:1;overflow-y:auto;padding:24px 32px}
+.page{display:none;height:100%;flex-direction:column}
+.page.active{display:flex}
+.stats-grid{display:grid;grid-template-columns:repeat(auto-fit,minmax(200px,1fr));gap:16px;margin-bottom:24px}
+.stat-card{background:var(--white);border-radius:var(--radius-lg);padding:20px;border:1px solid var(--border2);transition:var(--transition)}
+.stat-card:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px)}
+.stat-card .stat-icon{width:40px;height:40px;border-radius:10px;display:flex;align-items:center;justify-content:center;margin-bottom:12px;font-size:18px}
+.stat-card .stat-icon.blue{background:var(--primary-bg);color:var(--primary)}
+.stat-card .stat-icon.green{background:#ecfdf5;color:var(--green)}
+.stat-card .stat-icon.purple{background:#f5f3ff;color:var(--purple)}
+.stat-card .stat-icon.orange{background:#fff7ed;color:var(--orange)}
+.stat-card .stat-number{font-size:28px;font-weight:700}
+.stat-card .stat-label{font-size:12px;color:var(--text3);margin-top:4px}
+.home-actions{display:grid;grid-template-columns:repeat(auto-fit,minmax(160px,1fr));gap:12px;margin-bottom:24px}
+.home-action-btn{display:flex;flex-direction:column;align-items:center;gap:8px;padding:20px;border-radius:var(--radius-lg);background:var(--white);border:1px solid var(--border2);cursor:pointer;transition:var(--transition)}
+.home-action-btn:hover{box-shadow:var(--shadow-lg);transform:translateY(-2px);border-color:var(--primary)}
+.home-action-btn i{font-size:24px;color:var(--primary)}
+.home-action-btn span{font-size:12px;color:var(--text2);font-weight:500}
+.home-recent{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--border2)}
+.home-recent-header{padding:16px 20px;border-bottom:1px solid var(--border2);font-weight:600;font-size:14px}
+.home-recent-empty{padding:40px;text-align:center;color:var(--text3)}
+.ribbon{background:var(--ribbon-bg);border-bottom:1px solid var(--border);flex-shrink:0;user-select:none}
+.ribbon-tabs{display:flex;padding:0 8px;border-bottom:1px solid var(--border);background:var(--white)}
+.ribbon-tab{padding:6px 14px;font-size:12px;cursor:pointer;color:var(--text2);border-bottom:2px solid transparent;font-weight:500;transition:var(--transition);display:flex;align-items:center;gap:5px}
+.ribbon-tab:hover{color:var(--text);background:var(--ribbon-hover)}
+.ribbon-tab.active{color:var(--primary);border-bottom-color:var(--primary);background:var(--ribbon-active)}
+.ribbon-content{display:none;padding:5px 6px;min-height:48px;align-items:center;gap:2px;flex-wrap:wrap}
+.ribbon-content.active{display:flex}
+.ribbon-group{display:flex;align-items:center;gap:2px;padding:0 6px;border-right:1px solid var(--border);height:36px}
+.ribbon-group:last-child{border-right:none}
+.ribbon-btn{display:flex;align-items:center;justify-content:center;padding:4px 7px;height:30px;min-width:32px;border-radius:5px;cursor:pointer;border:none;background:transparent;color:var(--text2);font-size:12px;transition:var(--transition);gap:3px;white-space:nowrap}
+.ribbon-btn:hover{background:var(--ribbon-hover);color:var(--text)}
+.ribbon-btn i{font-size:14px}
+.ribbon-btn .label{font-size:10px}
+.ribbon-select{height:26px;padding:0 6px;border:1px solid var(--border);border-radius:4px;font-size:11px;background:var(--white);outline:none;cursor:pointer}
+.ribbon-color{width:22px;height:22px;padding:0;border:1px solid var(--border);border-radius:4px;cursor:pointer}
+.mode-selector{display:flex;background:var(--bg2);border-radius:6px;padding:2px;height:28px}
+.mode-btn{padding:3px 10px;border:none;background:transparent;border-radius:4px;cursor:pointer;font-size:10px;font-weight:600;color:var(--text2);transition:var(--transition);display:flex;align-items:center;gap:3px;white-space:nowrap}
+.mode-btn.active{background:var(--white);color:var(--primary);box-shadow:0 1px 3px rgba(0,0,0,0.1)}
+.formula-bar{display:flex;align-items:center;height:var(--formula-h);background:var(--white);border-bottom:1px solid var(--border);font-size:12px;flex-shrink:0}
+.formula-name{width:80px;padding:0 8px;font-family:Consolas,monospace;font-weight:600;border-right:1px solid var(--border);height:100%;display:flex;align-items:center}
+.formula-fx{width:24px;text-align:center;color:var(--primary);font-weight:700;border-right:1px solid var(--border);display:flex;align-items:center;justify-content:center;height:100%;cursor:pointer}
+.formula-input{flex:1;padding:0 8px;border:none;outline:none;font-family:Consolas,monospace;font-size:12px;height:100%}
+.sheet-container{flex:1;overflow:auto;position:relative;background:var(--white)}
+.sheet-table{border-collapse:collapse;margin:0 auto}
+.sheet-table td,.sheet-table th{border:1px solid var(--border);padding:0 4px;font-size:10pt;height:var(--row-h);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.sheet-table td{text-align:center;vertical-align:middle;font-family:SimSun,serif}
+.sheet-table th{background:linear-gradient(180deg,var(--ribbon-bg),#eef2f7);font-weight:600;color:var(--text2);text-align:center;vertical-align:middle;position:sticky;top:0;z-index:2;font-size:11px;height:var(--header-h);user-select:none}
+.sheet-table .row-num{background:var(--ribbon-bg);color:var(--text3);font-family:Consolas,monospace;text-align:center;font-size:10px;width:36px;position:sticky;left:0;z-index:1;min-width:36px;vertical-align:middle}
+.sheet-table .cell{outline:none;cursor:cell;min-width:82px;max-width:200px;transition:background .1s}
+.sheet-table .cell:focus{background:#fffde7!important;box-shadow:inset 0 0 0 2px var(--primary);z-index:3;position:relative}
+.sheet-table .cell.selected{box-shadow:inset 0 0 0 2px var(--primary-light)}
+.sheet-table .cell.demand{background:var(--demand-bg)}
+.sheet-table .cell.config{background:var(--config-bg)}
+.sheet-table .cell.diff{background:var(--diff-bg)}
+.sheet-table td:hover .cell:not(:focus){outline:1px solid var(--primary-light);outline-offset:-1px}
+.ai-fab{position:fixed;right:24px;bottom:24px;z-index:999;width:52px;height:52px;border-radius:50%;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;border:none;cursor:pointer;font-size:22px;box-shadow:0 4px 16px rgba(37,99,235,0.35);transition:var(--transition);display:flex;align-items:center;justify-content:center}
+.ai-fab:hover{transform:scale(1.08)}
+.ai-dialog{position:fixed;width:380px;height:520px;background:var(--white);border-radius:16px;box-shadow:0 16px 48px rgba(0,0,0,0.2);z-index:1000;display:flex;flex-direction:column;overflow:hidden;right:24px;bottom:88px}
+.ai-dialog.hidden{display:none!important}
+.ai-header{display:flex;align-items:center;justify-content:space-between;padding:12px 16px;background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;cursor:grab;user-select:none;flex-shrink:0}
+.ai-header:active{cursor:grabbing}
+.ai-header-title{display:flex;align-items:center;gap:8px;font-size:13px;font-weight:600}
+.ai-header-actions button{background:rgba(255,255,255,0.12);border:none;color:#fff;width:26px;height:26px;border-radius:6px;cursor:pointer;font-size:11px;transition:var(--transition)}
+.ai-header-actions button:hover{background:rgba(255,255,255,0.25)}
+.ai-body{flex:1;overflow-y:auto;padding:12px 14px;background:#f8fafc;display:flex;flex-direction:column;gap:8px}
+.ai-msg{padding:8px 12px;border-radius:10px;max-width:88%;font-size:12px;line-height:1.55;animation:fadeIn .2s ease}
+@keyframes fadeIn{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:translateY(0)}}
+.ai-msg.user{background:linear-gradient(135deg,var(--primary),var(--primary-dark));color:#fff;align-self:flex-end;border-bottom-right-radius:4px}
+.ai-msg.bot{background:var(--white);align-self:flex-start;border:1px solid var(--border);border-bottom-left-radius:4px}
+.ai-msg.system{background:#fff7ed;color:#92400e;align-self:center;font-size:11px;border-radius:6px}
+.ai-footer{padding:10px 14px;border-top:1px solid var(--border2);display:flex;flex-direction:column;gap:6px;background:var(--white)}
+.ai-footer input{flex:1;padding:8px 12px;border:1px solid var(--border);border-radius:8px;outline:none;font-size:12px}
+.ai-footer input:focus{border-color:var(--primary)}
+.ai-footer .send-btn{padding:8px 14px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;font-size:12px;font-weight:600}
+.ai-opacity-row{display:flex;align-items:center;gap:8px;padding:2px 4px}
+.ai-opacity-row input[type=range]{flex:1;height:3px;-webkit-appearance:none;background:var(--border);border-radius:2px}
+.ai-opacity-row input[type=range]::-webkit-slider-thumb{-webkit-appearance:none;width:12px;height:12px;border-radius:50%;background:var(--primary);cursor:pointer}
+.status-bar{height:var(--status-h);background:var(--sidebar-bg);color:var(--sidebar-text);display:flex;align-items:center;justify-content:space-between;padding:0 16px;font-size:11px;flex-shrink:0}
+.status-right{display:flex;gap:16px}
+.profile-card,.api-card{background:var(--white);border-radius:var(--radius-lg);border:1px solid var(--border2);padding:28px;max-width:600px;margin-bottom:20px}
+.profile-card h3,.api-card h3{font-size:16px;font-weight:600;margin-bottom:20px;padding-bottom:12px;border-bottom:1px solid var(--border2)}
+.profile-field,.api-field{margin-bottom:16px}
+.profile-field label,.api-field label{display:block;font-size:12px;color:var(--text3);margin-bottom:4px}
+.profile-field input,.api-field input,.api-field select{width:100%;padding:9px 12px;border:1px solid var(--border);border-radius:8px;font-size:13px;outline:none;transition:var(--transition)}
+.profile-field input:focus,.api-field input:focus,.api-field select:focus{border-color:var(--primary);box-shadow:0 0 0 3px var(--primary-bg)}
+.profile-btn{padding:9px 20px;border:none;border-radius:8px;cursor:pointer;font-size:13px;font-weight:500;transition:var(--transition)}
+.profile-btn.primary{background:var(--primary);color:#fff}
+.profile-btn.primary:hover{background:var(--primary-dark)}
+.toast{position:fixed;bottom:60px;left:50%;transform:translateX(-50%);z-index:4000;padding:10px 20px;border-radius:8px;background:var(--text);color:var(--white);font-size:13px;opacity:0;transition:all .3s;pointer-events:none}
+.toast.show{opacity:1}
+.toast.success{background:var(--green)}
+.toast.error{background:var(--red)}
+.toast.info{background:var(--primary)}
+.modal-overlay{position:fixed;inset:0;background:rgba(15,23,42,0.5);z-index:2000;display:flex;align-items:center;justify-content:center;backdrop-filter:blur(4px)}
+.modal{background:var(--white);border-radius:14px;box-shadow:0 20px 50px rgba(0,0,0,0.15);min-width:420px;max-width:640px;max-height:80vh;overflow-y:auto}
+.modal-header{padding:16px 20px;border-bottom:1px solid var(--border2);display:flex;justify-content:space-between;align-items:center}
+.modal-header h3{font-size:15px;font-weight:600}
+.modal-body{padding:20px}
+.modal-footer{padding:12px 20px;border-top:1px solid var(--border2);display:flex;justify-content:flex-end;gap:8px}
+.import-zone{border:2px dashed var(--border);border-radius:10px;padding:32px 20px;text-align:center;color:var(--text3);cursor:pointer;transition:var(--transition)}
+.import-zone:hover{border-color:var(--primary);color:var(--primary);background:var(--primary-bg)}
+.import-zone.dragover{border-color:var(--green);background:#ecfdf5;color:var(--green)}
+.loading-overlay{position:fixed;inset:0;background:rgba(255,255,255,0.85);z-index:3000;display:flex;align-items:center;justify-content:center;flex-direction:column;gap:16px}
+.spinner{width:36px;height:36px;border:3px solid var(--border);border-top-color:var(--primary);border-radius:50%;animation:spin .7s linear infinite}
+@keyframes spin{to{transform:rotate(360deg)}}
+@media(max-width:768px){.sidebar{width:56px}.sidebar-logo .text,.sidebar-item span,.sidebar-section,.sidebar-user .name{display:none}.sidebar-item{justify-content:center;padding:9px}.ai-dialog{width:calc(100vw - 32px)!important;right:16px}.login-card{width:calc(100vw - 32px);padding:28px}}
 </style>
 </head>
 <body>
-<div id="app">
-  <!-- LOADING -->
-  <div class="loading-overlay" id="loadingOverlay">
-    <div class="spinner"></div>
-    <div style="font-size:15px;color:var(--text2);">正在加载 AutoConfig ...</div>
-  </div>
 
-  <!-- RIBBON -->
-  <div class="ribbon" id="ribbon">
-    <div class="ribbon-tabs">
-      <div class="ribbon-tab active" data-tab="start"><i class="fa-solid fa-home"></i> 开始</div>
-      <div class="ribbon-tab" data-tab="insert"><i class="fa-solid fa-plus"></i> 插入</div>
-      <div class="ribbon-tab" data-tab="data"><i class="fa-solid fa-table"></i> 数据</div>
-      <div class="ribbon-tab" data-tab="ai"><i class="fa-solid fa-brain"></i> AI 工具</div>
-      <div class="ribbon-tab" data-tab="view"><i class="fa-solid fa-eye"></i> 视图</div>
+<!-- LOADING -->
+<div class="loading-overlay" id="loadingOverlay">
+  <div class="spinner"></div>
+  <div style="font-size:15px;color:var(--text2);">正在加载 AutoConfig ...</div>
+</div>
+
+<!-- LOGIN PAGE -->
+<div class="login-page" id="loginPage">
+  <div class="login-bg-grid"></div>
+  <div class="login-card">
+    <div class="login-logo">
+      <div class="icon"><i class="fa-solid fa-table-cells"></i></div>
+      <h1>AutoConfig</h1>
+      <p>智能配置表格系统 v0.2.0</p>
     </div>
-    <!-- START TAB -->
-    <div class="ribbon-content active" id="tab-start">
-      <div class="ribbon-group">
-        <button class="ribbon-btn" onclick="showModal('import')"><i class="fa-solid fa-file-import"></i><span class="ribbon-label">导入</span></button>
-        <button class="ribbon-btn" onclick="exportFile()"><i class="fa-solid fa-file-export"></i><span class="ribbon-label">导出</span></button>
-        <button class="ribbon-btn" onclick="newSheet()"><i class="fa-solid fa-file"></i><span class="ribbon-label">新建</span></button>
-      </div>
-      <div class="ribbon-group">
-        <button class="ribbon-btn small"><i class="fa-solid fa-scissors"></i> 剪切</button>
-        <button class="ribbon-btn small"><i class="fa-regular fa-copy"></i> 复制</button>
-        <button class="ribbon-btn small"><i class="fa-regular fa-paste"></i> 粘贴</button>
-      </div>
-      <div class="ribbon-group">
-        <div class="mode-selector">
-          <button class="mode-btn learn active" data-mode="learn" onclick="setMode('learn')"><i class="fa-solid fa-graduation-cap"></i> 学习</button>
-          <button class="mode-btn semi" data-mode="semi" onclick="setMode('semi')"><i class="fa-solid fa-robot"></i> 半自动</button>
-          <button class="mode-btn auto" data-mode="auto" onclick="setMode('auto')"><i class="fa-solid fa-wand-magic-sparkles"></i> 全自动</button>
+    <div class="login-tabs">
+      <button class="login-tab active" data-auth="login" onclick="switchAuthTab('login')">登录</button>
+      <button class="login-tab" data-auth="register" onclick="switchAuthTab('register')">注册</button>
+    </div>
+    <div id="loginForm">
+      <div class="login-field"><label>用户名</label><input type="text" id="loginUsername" placeholder="请输入用户名" autocomplete="username"></div>
+      <div class="login-field"><label>密码</label><input type="password" id="loginPassword" placeholder="请输入密码" autocomplete="current-password" onkeydown="if(event.key==='Enter')handleLogin()"></div>
+      <button class="login-btn" onclick="handleLogin()">登 录</button>
+      <div class="login-error" id="loginError"></div>
+    </div>
+    <div id="registerForm" style="display:none;">
+      <div class="login-field"><label>用户名</label><input type="text" id="regUsername" placeholder="设置用户名" autocomplete="username"></div>
+      <div class="login-field"><label>邮箱</label><input type="email" id="regEmail" placeholder="输入邮箱" autocomplete="email"></div>
+      <div class="login-field"><label>密码</label><input type="password" id="regPassword" placeholder="设置密码（至少6位）" autocomplete="new-password" onkeydown="if(event.key==='Enter')handleRegister()"></div>
+      <button class="login-btn" onclick="handleRegister()">注 册</button>
+      <div class="login-error" id="registerError"></div>
+    </div>
+  </div>
+</div>
+
+<!-- MAIN APP -->
+<div class="app-layout" id="appLayout" style="display:none;">
+  <!-- SIDEBAR -->
+  <div class="sidebar">
+    <div class="sidebar-logo"><div class="icon"><i class="fa-solid fa-table-cells"></i></div><div class="text"><h3>AutoConfig</h3><span>智能配置表格系统</span></div></div>
+    <div class="sidebar-nav">
+      <div class="sidebar-section">主导航</div>
+      <div class="sidebar-item active" data-page="home" onclick="switchPage('home')"><i class="fa-solid fa-house"></i><span>首页</span></div>
+      <div class="sidebar-item" data-page="sheets" onclick="switchPage('sheets')"><i class="fa-solid fa-table"></i><span>表格编辑器</span></div>
+      <div class="sidebar-section" style="margin-top:12px;">设置</div>
+      <div class="sidebar-item" data-page="profile" onclick="switchPage('profile')"><i class="fa-solid fa-user"></i><span>个人主页</span></div>
+      <div class="sidebar-item" data-page="api" onclick="switchPage('api')"><i class="fa-solid fa-key"></i><span>API 设置</span></div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="sidebar-user"><div class="avatar" id="sideAvatar">U</div><span class="name" id="sideName">用户</span><button class="logout-btn" onclick="handleLogout()" title="退出登录"><i class="fa-solid fa-right-from-bracket"></i></button></div>
+    </div>
+  </div>
+  <!-- MAIN CONTENT -->
+  <div class="main-area">
+    <!-- HOMEPAGE -->
+    <div class="page active" id="pageHome">
+      <div class="page-header"><h2>首页</h2><p>欢迎回来！以下是你的配置工具概览</p></div>
+      <div class="page-content">
+        <div class="stats-grid">
+          <div class="stat-card"><div class="stat-icon blue"><i class="fa-solid fa-table"></i></div><div class="stat-number">-</div><div class="stat-label">我的表格</div></div>
+          <div class="stat-card"><div class="stat-icon green"><i class="fa-solid fa-brain"></i></div><div class="stat-number">-</div><div class="stat-label">AI 匹配次数</div></div>
+          <div class="stat-card"><div class="stat-icon purple"><i class="fa-solid fa-book"></i></div><div class="stat-number">-</div><div class="stat-label">知识库文件</div></div>
+          <div class="stat-card"><div class="stat-icon orange"><i class="fa-solid fa-graduation-cap"></i></div><div class="stat-number">-</div><div class="stat-label">学习规则</div></div>
+        </div>
+        <div class="home-actions">
+          <div class="home-action-btn" onclick="switchPage('sheets')"><i class="fa-solid fa-file-pen"></i><span>新建表格</span></div>
+          <div class="home-action-btn" onclick="document.getElementById('fileInput')?.click()"><i class="fa-solid fa-file-import"></i><span>导入数据</span></div>
+          <div class="home-action-btn" onclick="switchPage('sheets')"><i class="fa-solid fa-wand-magic-sparkles"></i><span>AI 配置</span></div>
+          <div class="home-action-btn" onclick="switchPage('api')"><i class="fa-solid fa-key"></i><span>设置 API</span></div>
+        </div>
+        <div class="home-recent">
+          <div class="home-recent-header"><i class="fa-solid fa-clock-rotate-left"></i> 最近操作</div>
+          <div class="home-recent-empty"><i class="fa-solid fa-inbox" style="font-size:32px;display:block;margin-bottom:8px;opacity:0.3;"></i>还没有操作记录，去 <a href="#" onclick="switchPage('sheets');return false;" style="color:var(--primary);">表格编辑器</a> 开始吧</div>
         </div>
       </div>
     </div>
-    <!-- INSERT TAB -->
-    <div class="ribbon-content" id="tab-insert">
-      <div class="ribbon-group">
-        <button class="ribbon-btn"><i class="fa-solid fa-table-cells"></i><span class="ribbon-label">插入行</span></button>
-        <button class="ribbon-btn"><i class="fa-solid fa-table-cells-large"></i><span class="ribbon-label">插入列</span></button>
+    <!-- SHEETS -->
+    <div class="page" id="pageSheets">
+      <div class="ribbon" id="ribbon">
+        <div class="ribbon-tabs">
+          <div class="ribbon-tab active" data-tab="file"><i class="fa-regular fa-file"></i> 文件</div>
+          <div class="ribbon-tab" data-tab="clipboard"><i class="fa-regular fa-clipboard"></i> 剪贴</div>
+          <div class="ribbon-tab" data-tab="font"><i class="fa-solid fa-font"></i> 字体</div>
+          <div class="ribbon-tab" data-tab="align"><i class="fa-solid fa-align-left"></i> 对齐</div>
+          <div class="ribbon-tab" data-tab="number"><i class="fa-solid fa-hashtag"></i> 数字</div>
+          <div class="ribbon-tab" data-tab="cells"><i class="fa-solid fa-table-cells"></i> 单元格</div>
+          <div class="ribbon-tab" data-tab="border"><i class="fa-solid fa-border-all"></i> 边框</div>
+          <div class="ribbon-tab" data-tab="data"><i class="fa-solid fa-arrow-up-wide-short"></i> 数据</div>
+          <div class="ribbon-tab" data-tab="formula"><i class="fa-solid fa-function"></i> 公式</div>
+          <div class="ribbon-tab" data-tab="view"><i class="fa-solid fa-eye"></i> 视图</div>
+        </div>
+        <div class="ribbon-content active" id="tab-file">
+          <div class="ribbon-group">
+            <button class="ribbon-btn" onclick="newSheet()"><i class="fa-regular fa-file"></i><span class="label">新建</span></button>
+            <button class="ribbon-btn" onclick="document.getElementById('fileInput').click()"><i class="fa-regular fa-folder-open"></i><span class="label">打开</span></button>
+            <button class="ribbon-btn" onclick="exportFile()"><i class="fa-regular fa-floppy-disk"></i><span class="label">保存</span></button>
+            <button class="ribbon-btn" onclick="exportFile()"><i class="fa-regular fa-share-from-square"></i><span class="label">另存导出</span></button>
+          </div>
+          <div class="ribbon-group">
+            <button class="ribbon-btn" onclick="showToast('撤销', 'info')"><i class="fa-solid fa-arrow-rotate-left"></i><span class="label">撤销</span></button>
+            <button class="ribbon-btn" onclick="showToast('重做', 'info')"><i class="fa-solid fa-arrow-rotate-right"></i><span class="label">重做</span></button>
+          </div>
+          <div class="ribbon-group"><input type="file" id="fileInput" accept=".xlsx,.csv,.txt" style="display:none;" onchange="importFile(this.files[0])"></div>
+        </div>
+        <div class="ribbon-content" id="tab-clipboard">
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-regular fa-scissors"></i><span class="label">剪切</span></button><button class="ribbon-btn"><i class="fa-regular fa-copy"></i><span class="label">复制</span></button><button class="ribbon-btn" onclick="pasteFromClipboard()"><i class="fa-regular fa-paste"></i><span class="label">粘贴</span></button><button class="ribbon-btn"><i class="fa-solid fa-paint-roller"></i><span class="label">格式刷</span></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" onclick="showToast('查找', 'info')"><i class="fa-solid fa-magnifying-glass"></i><span class="label">查找</span></button><button class="ribbon-btn" onclick="showToast('替换', 'info')"><i class="fa-solid fa-arrows-rotate"></i><span class="label">替换</span></button><button class="ribbon-btn" onclick="newSheet()"><i class="fa-regular fa-trash-can"></i><span class="label">清除</span></button></div>
+        </div>
+        <div class="ribbon-content" id="tab-font">
+          <div class="ribbon-group"><select class="ribbon-select" style="width:110px;"><option>宋体</option><option>微软雅黑</option><option>黑体</option><option>Consolas</option><option>Arial</option></select><select class="ribbon-select" style="width:60px;"><option>10</option><option>9</option><option>11</option><option>12</option><option>14</option><option>16</option><option>18</option><option>20</option><option>24</option></select></div>
+          <div class="ribbon-group"><button class="ribbon-btn" title="加粗"><i class="fa-solid fa-bold"></i></button><button class="ribbon-btn" title="倾斜"><i class="fa-solid fa-italic"></i></button><button class="ribbon-btn" title="下划线"><i class="fa-solid fa-underline"></i></button><button class="ribbon-btn" title="删除线"><i class="fa-solid fa-strikethrough"></i></button></div>
+          <div class="ribbon-group"><input type="color" class="ribbon-color" title="字体颜色" value="#0f172a"><input type="color" class="ribbon-color" title="填充颜色" value="#ffffff"></div>
+        </div>
+        <div class="ribbon-content" id="tab-align">
+          <div class="ribbon-group"><button class="ribbon-btn" title="顶端"><i class="fa-solid fa-arrow-up-from-bracket"></i></button><button class="ribbon-btn" title="居中"><i class="fa-solid fa-arrows-up-down"></i></button><button class="ribbon-btn" title="底端"><i class="fa-solid fa-arrow-down-from-bracket"></i></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" title="左对齐"><i class="fa-solid fa-align-left"></i></button><button class="ribbon-btn active" title="居中对齐"><i class="fa-solid fa-align-center"></i></button><button class="ribbon-btn" title="右对齐"><i class="fa-solid fa-align-right"></i></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" title="自动换行"><i class="fa-solid fa-arrows-left-right-to-line"></i></button><button class="ribbon-btn" title="合并居中"><i class="fa-solid fa-table-cells-large"></i></button><button class="ribbon-btn" title="取消合并"><i class="fa-regular fa-table-cells-large"></i></button></div>
+        </div>
+        <div class="ribbon-content" id="tab-number">
+          <div class="ribbon-group"><select class="ribbon-select" style="width:90px;"><option>常规</option><option>数值</option><option>货币</option><option>百分比</option><option>日期</option><option>时间</option><option>文本</option></select><button class="ribbon-btn" title="千分位"><i class="fa-solid fa-comma"></i></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" title="增加小数"><i class="fa-solid fa-plus"></i><span class="label">.00</span></button><button class="ribbon-btn" title="减少小数"><i class="fa-solid fa-minus"></i><span class="label">.00</span></button><button class="ribbon-btn" title="货币"><i class="fa-solid fa-dollar-sign"></i></button><button class="ribbon-btn" title="百分比"><i class="fa-solid fa-percent"></i></button></div>
+        </div>
+        <div class="ribbon-content" id="tab-cells">
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-plus"></i><span class="label">插入行</span></button><button class="ribbon-btn"><i class="fa-solid fa-plus"></i><span class="label">插入列</span></button><button class="ribbon-btn"><i class="fa-solid fa-minus"></i><span class="label">删除行</span></button><button class="ribbon-btn"><i class="fa-solid fa-minus"></i><span class="label">删除列</span></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-eye-slash"></i><span class="label">隐藏</span></button><button class="ribbon-btn"><i class="fa-solid fa-eye"></i><span class="label">取消隐藏</span></button><button class="ribbon-btn"><i class="fa-solid fa-lock"></i><span class="label">锁定</span></button></div>
+        </div>
+        <div class="ribbon-content" id="tab-border">
+          <div class="ribbon-group"><button class="ribbon-btn" title="无边框"><i class="fa-regular fa-square"></i></button><button class="ribbon-btn" title="全部边框"><i class="fa-solid fa-border-all"></i></button><button class="ribbon-btn" title="外边框"><i class="fa-regular fa-square"></i></button><button class="ribbon-btn" title="内部边框"><i class="fa-solid fa-border-none"></i></button></div>
+          <div class="ribbon-group"><select class="ribbon-select"><option>细线</option><option>中等</option><option>粗线</option></select><input type="color" class="ribbon-color" title="边框颜色" value="#cbd5e1"></div>
+        </div>
+        <div class="ribbon-content" id="tab-data">
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-arrow-up-a-z"></i><span class="label">升序</span></button><button class="ribbon-btn"><i class="fa-solid fa-arrow-down-z-a"></i><span class="label">降序</span></button><button class="ribbon-btn"><i class="fa-solid fa-filter"></i><span class="label">筛选</span></button><button class="ribbon-btn"><i class="fa-solid fa-filter-circle-xmark"></i><span class="label">清除筛选</span></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" onclick="showModal('import')"><i class="fa-solid fa-file-excel"></i><span class="label">导入Excel</span></button><button class="ribbon-btn" onclick="pasteFromClipboard()"><i class="fa-regular fa-clipboard"></i><span class="label">粘贴数据</span></button><button class="ribbon-btn" onclick="showModal('knowledge')"><i class="fa-solid fa-book"></i><span class="label">知识库</span></button></div>
+          <div class="ribbon-group"><div class="mode-selector"><button class="mode-btn learn active" data-mode="learn" onclick="setMode('learn')"><i class="fa-solid fa-graduation-cap"></i>学习</button><button class="mode-btn semi" data-mode="semi" onclick="setMode('semi')"><i class="fa-solid fa-robot"></i>半自动</button><button class="mode-btn auto" data-mode="auto" onclick="setMode('auto')"><i class="fa-solid fa-wand-magic-sparkles"></i>全自动</button></div></div>
+        </div>
+        <div class="ribbon-content" id="tab-formula">
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-sigma"></i><span class="label">自动求和</span></button><button class="ribbon-btn"><i class="fa-solid fa-chart-line"></i><span class="label">平均值</span></button><button class="ribbon-btn"><i class="fa-solid fa-hashtag"></i><span class="label">计数</span></button><button class="ribbon-btn"><i class="fa-solid fa-arrow-up"></i><span class="label">最大值</span></button><button class="ribbon-btn"><i class="fa-solid fa-arrow-down"></i><span class="label">最小值</span></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-function"></i><span class="label">插入函数</span></button><button class="ribbon-btn"><i class="fa-solid fa-rotate"></i><span class="label">刷新计算</span></button></div>
+        </div>
+        <div class="ribbon-content" id="tab-view">
+          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-lock"></i><span class="label">冻结首行</span></button><button class="ribbon-btn"><i class="fa-solid fa-lock"></i><span class="label">冻结首列</span></button><button class="ribbon-btn"><i class="fa-solid fa-lock"></i><span class="label">冻结窗格</span></button><button class="ribbon-btn"><i class="fa-solid fa-lock-open"></i><span class="label">取消冻结</span></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" onclick="toggleAIDialog()"><i class="fa-solid fa-comment-dots"></i><span class="label">AI对话</span></button><button class="ribbon-btn" onclick="autoConfigure()"><i class="fa-solid fa-wand-magic-sparkles"></i><span class="label">全自动配置</span></button><button class="ribbon-btn" onclick="showModal('memory')"><i class="fa-solid fa-database"></i><span class="label">记忆管理</span></button></div>
+        </div>
+      </div>
+      <div class="formula-bar">
+        <div class="formula-name" id="formulaName">A1</div>
+        <div class="formula-fx" title="插入函数">fx</div>
+        <input class="formula-input" id="formulaInput" placeholder="输入内容或公式" readonly onfocus="this.select()">
+      </div>
+      <div class="sheet-container" id="sheetContainer">
+        <table class="sheet-table" id="sheetTable"></table>
+      </div>
+      <div class="status-bar">
+        <div class="mode-indicator" id="modeIndicator"><i class="fa-solid fa-graduation-cap"></i> 学习模式</div>
+        <div class="status-right"><span id="statusRows">0 行</span><span id="statusCols">18 列</span><span id="statusCell">活动: A1</span></div>
       </div>
     </div>
-    <!-- DATA TAB -->
-    <div class="ribbon-content" id="tab-data">
-      <div class="ribbon-group">
-        <button class="ribbon-btn" onclick="showModal('import')"><i class="fa-solid fa-file-excel"></i><span class="ribbon-label">导入Excel</span></button>
-        <button class="ribbon-btn" onclick="pasteFromClipboard()"><i class="fa-solid fa-clipboard"></i><span class="ribbon-label">粘贴数据</span></button>
-        <button class="ribbon-btn" onclick="showModal('knowledge')"><i class="fa-solid fa-book"></i><span class="ribbon-label">知识库</span></button>
+    <!-- PROFILE -->
+    <div class="page" id="pageProfile">
+      <div class="page-header"><h2>个人主页</h2><p>管理你的账户信息和密码</p></div>
+      <div class="page-content">
+        <div class="profile-card">
+          <h3><i class="fa-regular fa-address-card"></i> 账户信息</h3>
+          <div class="profile-field"><label>用户名</label><input type="text" id="profUsername" disabled></div>
+          <div class="profile-field"><label>显示名称</label><input type="text" id="profDisplayName" placeholder="设置显示名称"></div>
+          <div class="profile-field"><label>邮箱</label><input type="email" id="profEmail" placeholder="your@email.com"></div>
+          <button class="profile-btn primary" onclick="updateProfile()"><i class="fa-regular fa-floppy-disk"></i> 保存修改</button>
+        </div>
+        <div class="profile-card">
+          <h3><i class="fa-solid fa-lock"></i> 修改密码</h3>
+          <div class="profile-field"><label>原密码</label><input type="password" id="profOldPwd" placeholder="输入原密码"></div>
+          <div class="profile-field"><label>新密码</label><input type="password" id="profNewPwd" placeholder="输入新密码（至少6位）"></div>
+          <div class="profile-field"><label>确认新密码</label><input type="password" id="profConfirmPwd" placeholder="再次输入新密码"></div>
+          <button class="profile-btn primary" onclick="changePassword()"><i class="fa-solid fa-key"></i> 修改密码</button>
+        </div>
       </div>
     </div>
-    <!-- AI TAB -->
-    <div class="ribbon-content" id="tab-ai">
-      <div class="ribbon-group">
-        <button class="ribbon-btn" onclick="toggleAIDialog()"><i class="fa-solid fa-comment-dots"></i><span class="ribbon-label">AI对话</span></button>
-        <button class="ribbon-btn" onclick="autoConfigure()"><i class="fa-solid fa-wand-magic-sparkles"></i><span class="ribbon-label">全自动配置</span></button>
-        <button class="ribbon-btn" onclick="showModal('memory')"><i class="fa-solid fa-database"></i><span class="ribbon-label">记忆管理</span></button>
-      </div>
-    </div>
-    <!-- VIEW TAB -->
-    <div class="ribbon-content" id="tab-view">
-      <div class="ribbon-group">
-        <label style="font-size:11px;color:var(--text3);display:flex;align-items:center;gap:4px;">
-          <i class="fa-solid fa-eye-slash"></i> 隐藏列
-          <select style="margin-left:4px;padding:2px 4px;border:1px solid var(--border);border-radius:3px;font-size:11px;">
-            <option>全部显示</option>
-            <option>仅需求区 (A-E)</option>
-            <option>仅配置区 (H-Q)</option>
-          </select>
-        </label>
+    <!-- API SETTINGS -->
+    <div class="page" id="pageApi">
+      <div class="page-header"><h2>API 设置</h2><p>配置 AI 模型提供商和 API Key，支持国内外主流模型</p></div>
+      <div class="page-content">
+        <div class="api-card">
+          <h3><i class="fa-solid fa-microchip"></i> AI 模型配置</h3>
+          <div class="api-field"><label>模型提供商</label><select id="apiProvider" onchange="onProviderChange()"><option value="">请选择提供商</option></select></div>
+          <div class="api-field"><label>AI 模型</label><select id="apiModel"><option value="">请先选择提供商</option></select></div>
+          <div class="api-field"><label>API Key</label><div class="pwd-wrap"><input type="password" id="apiKey" placeholder="输入你的 API Key"><button class="pwd-toggle" onclick="togglePwdVis()"><i class="fa-regular fa-eye" id="apiKeyIcon"></i></button></div><div class="api-provider-info">API Key 仅保存在本地服务器</div></div>
+          <div class="api-field"><label>API Base URL</label><input type="text" id="apiBase" placeholder="https://api.openai.com/v1"><div class="api-provider-info" id="apiBaseHint">选择提供商后自动填充</div></div>
+          <button class="profile-btn primary" onclick="saveApiSettings()"><i class="fa-regular fa-floppy-disk"></i> 保存设置</button><span id="apiSaveResult" style="margin-left:10px;font-size:12px;"></span>
+        </div>
       </div>
     </div>
   </div>
-
-  <!-- TOOLBAR -->
-  <div class="toolbar">
-    <button onclick="showModal('import')"><i class="fa-solid fa-file-import"></i> 导入</button>
-    <button onclick="exportFile()"><i class="fa-solid fa-download"></i> 导出</button>
-    <div class="separator"></div>
-    <button onclick="setMode('learn')" id="tbLearn"><i class="fa-solid fa-graduation-cap" style="color:var(--purple);"></i> 学习</button>
-    <button onclick="setMode('semi')" id="tbSemi"><i class="fa-solid fa-robot" style="color:var(--orange);"></i> 半自动</button>
-    <button onclick="setMode('auto')" id="tbAuto"><i class="fa-solid fa-wand-magic-sparkles" style="color:var(--green);"></i> 全自动</button>
-    <div class="separator"></div>
-    <button onclick="toggleAIDialog()"><i class="fa-solid fa-comment-dots" style="color:var(--blue);"></i> AI对话</button>
-  </div>
-
-  <!-- FORMULA BAR -->
-  <div class="formula-bar">
-    <div class="formula-name" id="formulaName">A1</div>
-    <div class="formula-fx" title="插入函数">fx</div>
-    <input class="formula-input" id="formulaInput" placeholder="输入内容或公式" readonly onfocus="this.select()">
-  </div>
-
-  <!-- SPREADSHEET -->
-  <div class="sheet-container" id="sheetContainer">
-    <table class="sheet-table" id="sheetTable"></table>
-  </div>
-
-  <!-- AI DIALOG -->
-  <div class="ai-dialog" id="aiDialog" style="display:none;">
-    <div class="ai-header" id="aiHeader">
-      <div class="ai-header-title"><i class="fa-solid fa-brain"></i> AI 配置助手</div>
-      <div class="ai-header-actions">
-        <button onclick="toggleAIOpacity()" title="透明度"><i class="fa-solid fa-circle-half-stroke"></i></button>
-        <button onclick="toggleAILock()" title="锁定"><i class="fa-solid fa-lock-open" id="aiLockIcon"></i></button>
-        <button onclick="minimizeAI()" title="最小化"><i class="fa-solid fa-minus"></i></button>
-        <button onclick="toggleAIDialog()" title="关闭">✕</button>
-      </div>
-    </div>
-    <div class="ai-body" id="aiBody">
-      <div class="ai-msg system">💡 当前模式: <span id="aiModeLabel">学习模式</span>。在下方输入查询知识库或寻求配单建议。</div>
-      <div class="ai-msg bot" id="aiWelcome">你好！我是 AI 配置助手。请告诉我你需要什么帮助：
-        <br><br>
-        • 查询产品知识库
-        <br>
-        • 寻求配单建议
-        <br>
-        • 分析需求参数
-        <br>
-        • 教我如何配单（调教模式）
-      </div>
-    </div>
-    <div class="ai-footer">
-      <input type="text" id="aiInput" placeholder="输入消息 ..." onkeydown="if(event.key==='Enter')sendAIMessage()">
-      <button onclick="sendAIMessage()"><i class="fa-solid fa-paper-plane"></i> 发送</button>
-    </div>
-  </div>
-
-  <!-- AI TOGGLE BUTTON (when dialog hidden) -->
-  <div class="ai-controls" id="aiControls">
-    <button class="ai-toggle-btn" onclick="toggleAIDialog()" title="打开AI对话"><i class="fa-solid fa-comment-dots"></i></button>
-  </div>
-
-  <!-- STATUS BAR -->
-  <div class="status-bar">
-    <div class="mode-indicator" id="modeIndicator"><i class="fa-solid fa-graduation-cap"></i> 学习模式</div>
-    <div class="status-right">
-      <span id="statusRows">0 行</span>
-      <span id="statusCols">18 列</span>
-      <span id="statusCell">活动: A1</span>
-    </div>
-  </div>
-
-  <!-- TOAST -->
-  <div class="toast" id="toast"></div>
 </div>
 
-<!-- ==================== MODAL: IMPORT ==================== -->
+<!-- AI CHAT -->
+<button class="ai-fab" id="aiFab" onclick="toggleAIDialog()"><i class="fa-regular fa-message"></i></button>
+<div class="ai-dialog hidden" id="aiDialog">
+  <div class="ai-header" id="aiHeader">
+    <div class="ai-header-title"><i class="fa-solid fa-brain"></i> AI 配置助手 <span id="aiModeLabel" style="font-weight:400;font-size:11px;opacity:0.8;">学习模式</span></div>
+    <div class="ai-header-actions">
+      <button onclick="minimizeAI()" title="最小化"><i class="fa-solid fa-minus"></i></button>
+      <button onclick="toggleAIDialog()" title="关闭"><i class="fa-solid fa-xmark"></i></button>
+    </div>
+  </div>
+  <div class="ai-body" id="aiBody">
+    <div class="ai-msg system">当前模式: <span id="aiModeLabelInner">学习模式</span></div>
+    <div class="ai-msg bot" id="aiWelcome">你好！我是 AI 配置助手<br><br>查询产品知识库 / 配单建议 / 分析需求</div>
+  </div>
+  <div class="ai-footer">
+    <div class="ai-footer-row"><input type="text" id="aiInput" placeholder="输入消息 ..." onkeydown="if(event.key==='Enter')sendAIMessage()"><button class="send-btn" onclick="sendAIMessage()"><i class="fa-regular fa-paper-plane"></i> 发送</button></div>
+    <div class="ai-opacity-row"><label><i class="fa-solid fa-circle-half-stroke"></i></label><input type="range" id="aiOpacitySlider" min="20" max="100" value="100" oninput="setAIOpacity(this.value)"><label id="aiOpacityLabel" style="font-size:10px;width:30px;text-align:right;">100%</label></div>
+  </div>
+</div>
+
+<!-- TOAST -->
+<div class="toast" id="toast"></div>
+
+<!-- MODALS -->
 <div class="modal-overlay" id="modalImport" style="display:none;" onclick="if(event.target===this)hideModal('import')">
   <div class="modal">
-    <div class="modal-header"><h3><i class="fa-solid fa-file-import"></i> 导入数据</h3><button class="modal-close" onclick="hideModal('import')">✕</button></div>
+    <div class="modal-header"><h3><i class="fa-solid fa-file-import"></i> 导入数据</h3><button class="modal-close" onclick="hideModal('import')">x</button></div>
     <div class="modal-body">
-      <div style="margin-bottom:16px;">
-        <button class="ribbon-btn small" onclick="pasteFromClipboard();hideModal('import')" style="display:inline-flex;padding:8px 16px;border:1px solid var(--border);border-radius:6px;"><i class="fa-regular fa-clipboard"></i> 从剪贴板粘贴</button>
-        <span style="margin:0 8px;color:var(--text3);">或</span>
-        <button class="ribbon-btn small" onclick="document.getElementById('fileInput').click()" style="display:inline-flex;padding:8px 16px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-file-excel"></i> 选择文件</button>
-        <input type="file" id="fileInput" accept=".xlsx,.csv,.txt" style="display:none;" onchange="importFile(this.files[0])">
-      </div>
-      <div id="import-zone" onclick="document.getElementById('fileInput').click()">
-        <i class="fa-solid fa-cloud-arrow-up"></i>
-        <p>拖拽文件到此处，或点击选择文件</p>
-        <small>支持 Excel (.xlsx)、CSV (.csv)、文本文件 (.txt)</small>
-      </div>
-      <div id="importPreview" style="margin-top:16px;display:none;">
-        <p style="font-weight:600;margin-bottom:8px;">导入预览</p>
-        <div style="max-height:200px;overflow:auto;border:1px solid var(--border);border-radius:6px;"></div>
-      </div>
+      <div style="margin-bottom:16px;display:flex;gap:8px;"><button class="ribbon-btn" onclick="pasteFromClipboard();hideModal('import')" style="padding:8px 16px;border:1px solid var(--border);border-radius:6px;"><i class="fa-regular fa-clipboard"></i> 粘贴</button><button class="ribbon-btn" onclick="document.getElementById('fileInputModal').click()" style="padding:8px 16px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-file-excel"></i> 选择文件</button><input type="file" id="fileInputModal" accept=".xlsx,.csv,.txt" style="display:none;" onchange="importFile(this.files[0]);hideModal('import')"></div>
+      <div class="import-zone" id="importZone" onclick="document.getElementById('fileInputModal').click()"><i class="fa-solid fa-cloud-arrow-up"></i><p>拖拽文件到此处</p><small>支持 xlsx / csv / txt</small></div>
     </div>
-    <div class="modal-footer">
-      <button class="ribbon-btn small" onclick="hideModal('import')" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;">取消</button>
-      <button class="ribbon-btn small" onclick="confirmImport();hideModal('import')" style="padding:8px 20px;background:var(--blue2);color:var(--white);border:none;border-radius:6px;">确认导入</button>
-    </div>
+    <div class="modal-footer"><button style="padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;" onclick="hideModal('import')">取消</button><button style="padding:8px 20px;background:var(--primary);color:#fff;border:none;border-radius:8px;cursor:pointer;" onclick="confirmImport();hideModal('import')">确认导入</button></div>
   </div>
 </div>
 
-<!-- ==================== MODAL: KNOWLEDGE ==================== -->
 <div class="modal-overlay" id="modalKnowledge" style="display:none;" onclick="if(event.target===this)hideModal('knowledge')">
   <div class="modal">
-    <div class="modal-header"><h3><i class="fa-solid fa-book"></i> 知识库管理</h3><button class="modal-close" onclick="hideModal('knowledge')">✕</button></div>
-    <div class="modal-body">
-      <p style="color:var(--text3);margin-bottom:16px;">上传产品配置模板、FAQ、产品目录等资料供 AI 学习</p>
-      <div id="import-zone" style="margin-bottom:16px;" onclick="document.getElementById('kbFileInput').click()">
-        <i class="fa-solid fa-cloud-arrow-up" style="font-size:24px;display:block;margin-bottom:8px;"></i>
-        <p style="font-size:13px;">上传知识库文件</p>
-        <small style="font-size:11px;">支持 xlsx / csv / txt / pdf / docx</small>
-        <input type="file" id="kbFileInput" accept=".xlsx,.csv,.txt,.pdf,.docx" style="display:none;" multiple onchange="uploadKnowledge(this.files)">
-      </div>
-      <div id="kbList" style="border:1px solid var(--border);border-radius:6px;min-height:60px;padding:12px;">
-        <p style="color:var(--text3);font-size:12px;">暂未上传知识库文件。上传后 AI 可基于产品知识进行智能配单。</p>
-      </div>
+    <div class="modal-header"><h3><i class="fa-solid fa-book"></i> 知识库管理</h3><button class="modal-close" onclick="hideModal('knowledge')">x</button></div>
+    <div class="modal-body"><p style="color:var(--text3);margin-bottom:16px;">上传产品资料供 AI 学习</p>
+      <div class="import-zone" onclick="document.getElementById('kbFileInput').click()"><i class="fa-solid fa-cloud-arrow-up"></i><p>上传知识库文件</p><input type="file" id="kbFileInput" accept=".xlsx,.csv,.txt,.pdf,.docx" style="display:none;" multiple onchange="uploadKnowledge(this.files)"></div>
+      <div id="kbList" style="border:1px solid var(--border);border-radius:8px;min-height:60px;padding:12px;margin-top:16px;"><p style="color:var(--text3);font-size:12px;">暂未上传知识库文件。</p></div>
     </div>
-    <div class="modal-footer">
-      <button class="ribbon-btn small" onclick="hideModal('knowledge')" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;">关闭</button>
-    </div>
+    <div class="modal-footer"><button style="padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;" onclick="hideModal('knowledge')">关闭</button></div>
   </div>
 </div>
 
-<!-- ==================== MODAL: MEMORY ==================== -->
 <div class="modal-overlay" id="modalMemory" style="display:none;" onclick="if(event.target===this)hideModal('memory')">
   <div class="modal">
-    <div class="modal-header"><h3><i class="fa-solid fa-database"></i> 记忆管理</h3><button class="modal-close" onclick="hideModal('memory')">✕</button></div>
+    <div class="modal-header"><h3><i class="fa-solid fa-database"></i> 记忆管理</h3><button class="modal-close" onclick="hideModal('memory')">x</button></div>
     <div class="modal-body">
-      <p style="color:var(--text3);margin-bottom:16px;">导出/导入 AI 学习记忆。记忆文件可在不同电脑间同步。</p>
+      <p style="color:var(--text3);margin-bottom:16px;">导出/导入 AI 学习记忆。</p>
       <div style="display:flex;gap:12px;flex-wrap:wrap;">
-        <button class="ribbon-btn small" onclick="exportMemory()" style="padding:10px 20px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-download"></i> 导出记忆</button>
-        <button class="ribbon-btn small" onclick="document.getElementById('memFileInput').click()" style="padding:10px 20px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-upload"></i> 导入记忆</button>
+        <button style="padding:10px 20px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;" onclick="exportMemory()"><i class="fa-solid fa-download"></i> 导出</button>
+        <button style="padding:10px 20px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;" onclick="document.getElementById('memFileInput').click()"><i class="fa-solid fa-upload"></i> 导入</button>
         <input type="file" id="memFileInput" accept=".mem,.json" style="display:none;" onchange="importMemory(this.files[0])">
-        <button class="ribbon-btn small" onclick="syncMemory()" style="padding:10px 20px;border:1px solid var(--border);border-radius:6px;"><i class="fa-solid fa-cloud-arrow-up"></i> 云同步</button>
+        <button style="padding:10px 20px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;" onclick="syncMemory()"><i class="fa-solid fa-cloud-arrow-up"></i> 云同步</button>
       </div>
-      <div style="margin-top:16px;">
-        <label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;">
-          <input type="checkbox" id="syncToggle"> 启用云同步（学习记忆将自动同步到云端）
-        </label>
-      </div>
+      <div style="margin-top:16px;"><label style="display:flex;align-items:center;gap:8px;font-size:12px;cursor:pointer;"><input type="checkbox" id="syncToggle"> 启用云同步</label></div>
     </div>
-    <div class="modal-footer">
-      <button class="ribbon-btn small" onclick="hideModal('memory')" style="padding:8px 20px;border:1px solid var(--border);border-radius:6px;">关闭</button>
-    </div>
+    <div class="modal-footer"><button style="padding:8px 20px;border:1px solid var(--border);border-radius:8px;background:var(--white);cursor:pointer;" onclick="hideModal('memory')">关闭</button></div>
   </div>
 </div>
-
 <script>
 // ==================== APP STATE ====================
 const STATE = {
-  mode: 'learn',         // 'learn' | 'semi' | 'auto'
-  currentTab: 'start',
+  mode: 'learn',
+  currentTab: 'file',
   currentCell: { row: 0, col: 0 },
   selectedCells: [],
-  data: [],              // 2D array: data[row][col]
+  data: [],
   rows: 30,
   cols: 18,
   aiDialogVisible: false,
@@ -547,11 +435,113 @@ const STATE = {
   apiBase: 'http://localhost:8000',
   userId: null,
   token: null,
+  user: null,
 };
 
 const COLUMNS = ['A','B','C','D','E','F','G','H','I','J','K','L','M','N','O','P','Q','R'];
 const COL_NAMES = ['序号','设备名称','招标/需求参数','单位','数量','','','产品名称','产品规格','品牌','产品型号','厂家内部型号','数量','单位','产品单价','总价','备注','不满足参数'];
 const COL_ZONES = ['demand','demand','demand','demand','demand','','','config','config','config','config','config','config','config','config','config','config','diff'];
+
+// ==================== AUTH ====================
+let currentAuthTab = 'login';
+
+function switchAuthTab(tab) {
+  currentAuthTab = tab;
+  document.querySelectorAll('.login-tab').forEach(t => t.classList.toggle('active', t.dataset.auth === tab));
+  document.getElementById('loginForm').style.display = tab === 'login' ? '' : 'none';
+  document.getElementById('registerForm').style.display = tab === 'register' ? '' : 'none';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('registerError').textContent = '';
+}
+
+async function handleLogin() {
+  const username = document.getElementById('loginUsername').value.trim();
+  const password = document.getElementById('loginPassword').value.trim();
+  const errEl = document.getElementById('loginError');
+  if (!username || !password) { errEl.textContent = '请填写用户名和密码'; return; }
+  errEl.textContent = '登录中...';
+  try {
+    const resp = await fetch(STATE.apiBase + '/api/auth/login', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password }),
+    });
+    const result = await resp.json();
+    if (result.success) {
+      STATE.token = result.data.access_token;
+      STATE.user = result.data.user;
+      localStorage.setItem('autoconfig_token', STATE.token);
+      localStorage.setItem('autoconfig_user', JSON.stringify(STATE.user));
+      afterLogin();
+    } else {
+      errEl.textContent = result.error || '登录失败';
+    }
+  } catch(e) {
+    errEl.textContent = '连接服务器失败: ' + e.message;
+  }
+}
+
+async function handleRegister() {
+  const username = document.getElementById('regUsername').value.trim();
+  const email = document.getElementById('regEmail').value.trim();
+  const password = document.getElementById('regPassword').value.trim();
+  const errEl = document.getElementById('registerError');
+  if (!username || !email || !password) { errEl.textContent = '请填写所有字段'; return; }
+  if (password.length < 6) { errEl.textContent = '密码至少6位'; return; }
+  errEl.textContent = '注册中...';
+  try {
+    const resp = await fetch(STATE.apiBase + '/api/auth/register', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ username, password, email }),
+    });
+    const result = await resp.json();
+    if (result.success) {
+      errEl.textContent = '注册成功，请登录';
+      switchAuthTab('login');
+      document.getElementById('loginUsername').value = username;
+    } else {
+      errEl.textContent = result.error || '注册失败';
+    }
+  } catch(e) {
+    errEl.textContent = '连接服务器失败: ' + e.message;
+  }
+}
+
+function afterLogin() {
+  document.getElementById('loginPage').style.display = 'none';
+  document.getElementById('appLayout').style.display = 'flex';
+  const u = STATE.user;
+  document.getElementById('sideAvatar').textContent = (u.display_name || u.username || 'U')[0].toUpperCase();
+  document.getElementById('sideName').textContent = u.display_name || u.username;
+  init();
+  loadModels();
+  loadProfile();
+  loadApiSettings();
+}
+
+function handleLogout() {
+  STATE.token = null;
+  STATE.user = null;
+  localStorage.removeItem('autoconfig_token');
+  localStorage.removeItem('autoconfig_user');
+  document.getElementById('appLayout').style.display = 'none';
+  document.getElementById('loginPage').style.display = '';
+  document.getElementById('loginError').textContent = '';
+  document.getElementById('loginPassword').value = '';
+}
+
+// ==================== PAGE ROUTING ====================
+function switchPage(page) {
+  document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
+  document.querySelectorAll('.sidebar-item').forEach(i => i.classList.remove('active'));
+  document.getElementById('page' + page.charAt(0).toUpperCase() + page.slice(1)).classList.add('active');
+  const item = document.querySelector('.sidebar-item[data-page="' + page + '"]');
+  if (item) item.classList.add('active');
+  if (page === 'sheets') {
+    document.getElementById('loadingOverlay').style.display = 'flex';
+    setTimeout(() => document.getElementById('loadingOverlay').style.display = 'none', 300);
+    renderSheet();
+  }
+}
 
 // ==================== INIT ====================
 async function init() {
@@ -569,7 +559,7 @@ async function init() {
 async function createSheet() {
   STATE.data = Array.from({ length: STATE.rows }, (_, ri) =>
     Array.from({ length: STATE.cols }, (_, ci) => {
-      if (ci === 0 && ri >= 0) return String(ri + 1); // Auto number
+      if (ci === 0 && ri >= 0) return String(ri + 1);
       return '';
     })
   );
@@ -579,31 +569,27 @@ async function createSheet() {
 function renderSheet() {
   const table = document.getElementById('sheetTable');
   let html = '<thead><tr><th style="min-width:36px;position:sticky;left:0;z-index:3;">#</th>';
-  
-  // Column headers with zone coloring
   COLUMNS.forEach((col, ci) => {
-    const bg = COL_ZONES[ci] === 'demand' ? '#ebf5fb' : COL_ZONES[ci] === 'config' ? '#e8f8f5' : COL_ZONES[ci] === 'diff' ? '#fdedec' : '';
+    const bg = COL_ZONES[ci] === 'demand' ? '#eff6ff' : COL_ZONES[ci] === 'config' ? '#ecfdf5' : COL_ZONES[ci] === 'diff' ? '#fef2f2' : '';
     const title = COL_NAMES[ci] || '';
-    html += `<th style="${bg ? 'background:'+bg+';' : ''}min-width:82px;" title="${title}">${col}<br><span style="font-weight:400;font-size:9px;">${title}</span></th>`;
+    html += '<th style="' + (bg ? 'background:'+bg+';' : '') + 'min-width:82px;" title="' + title + '">' + col + '<br><span style="font-weight:400;font-size:9px;">' + title + '</span></th>';
   });
   html += '</tr></thead><tbody>';
-
   STATE.data.forEach((row, ri) => {
-    html += `<tr><td class="row-num">${ri + 1}</td>`;
+    html += '<tr><td class="row-num">' + (ri + 1) + '</td>';
     row.forEach((cell, ci) => {
       const zone = COL_ZONES[ci];
-      const zoneClass = zone ? `cell ${zone}` : 'cell';
+      const zoneClass = zone ? 'cell ' + zone : 'cell';
       const val = cell || '';
-      // Auto-number for column A
       const displayVal = ci === 0 && !val ? String(ri + 1) : val;
-      html += `<td class="${zoneClass}" contenteditable="true"
-        data-row="${ri}" data-col="${ci}"
-        onfocus="onCellFocus(this, ${ri}, ${ci})"
-        onblur="onCellBlur(this, ${ri}, ${ci})"
-        oninput="onCellInput(this, ${ri}, ${ci})"
-        onkeydown="onCellKeydown(event, ${ri}, ${ci})"
-        style="text-align:${ci >= 13 && ci <= 15 ? 'right' : 'left'};"
-      >${displayVal}</td>`;
+      html += '<td class="' + zoneClass + '" contenteditable="true"'
+        + ' data-row="' + ri + '" data-col="' + ci + '"'
+        + ' onfocus="onCellFocus(this, ' + ri + ', ' + ci + ')"'
+        + ' onblur="onCellBlur(this, ' + ri + ', ' + ci + ')"'
+        + ' oninput="onCellInput(this, ' + ri + ', ' + ci + ')"'
+        + ' onkeydown="onCellKeydown(event, ' + ri + ', ' + ci + ')"'
+        + ' style="text-align:center;vertical-align:middle;"'
+        + '>' + displayVal + '</td>';
     });
     html += '</tr>';
   });
@@ -615,10 +601,10 @@ function renderSheet() {
 // ==================== CELL EVENTS ====================
 function onCellFocus(el, row, col) {
   STATE.currentCell = { row, col };
-  document.getElementById('formulaName').textContent = `${COLUMNS[col]}${row + 1}`;
+  document.getElementById('formulaName').textContent = COLUMNS[col] + (row + 1);
   document.getElementById('formulaInput').value = el.textContent;
   document.getElementById('formulaInput').readOnly = false;
-  document.getElementById('statusCell').textContent = `活动: ${COLUMNS[col]}${row + 1}`;
+  document.getElementById('statusCell').textContent = '活动: ' + COLUMNS[col] + (row + 1);
   el.classList.add('selected');
 }
 
@@ -634,10 +620,9 @@ function onCellInput(el, row, col) {
 function onCellKeydown(e, row, col) {
   if (e.key === 'Enter') {
     e.preventDefault();
-    // Move to next row
     const nextRow = row + 1;
     if (nextRow < STATE.rows) {
-      const nextCell = document.querySelector(`td[data-row="${nextRow}"][data-col="${col}"]`);
+      const nextCell = document.querySelector('td[data-row="' + nextRow + '"][data-col="' + col + '"]');
       if (nextCell) nextCell.focus();
     }
   } else if (e.key === 'Tab') {
@@ -645,7 +630,7 @@ function onCellKeydown(e, row, col) {
     const nextCol = (col + 1) % STATE.cols;
     const nextRow = nextCol === 0 ? row + 1 : row;
     if (nextRow < STATE.rows) {
-      const nextCell = document.querySelector(`td[data-row="${nextRow}"][data-col="${nextCol}"]`);
+      const nextCell = document.querySelector('td[data-row="' + nextRow + '"][data-col="' + nextCol + '"]');
       if (nextCell) nextCell.focus();
     }
   } else if (e.key === 'Escape') {
@@ -658,38 +643,28 @@ async function pasteFromClipboard() {
   try {
     const text = await navigator.clipboard.readText();
     const rows = text.split('\n').filter(r => r.trim());
-    if (rows.length === 0) {
-      showToast('剪贴板为空', 'error');
-      return;
-    }
-    const parsed = rows.map(r => {
-      // Try tab-separated first, then comma
-      const cells = r.includes('\t') ? r.split('\t') : r.split(',');
-      return cells.map(c => c.trim().replace(/^"|"$/g, ''));
+    if (rows.length === 0) { showToast('剪贴板为空', 'error'); return; }
+    const parsed = rows.map(function(r) {
+      const cells = r.indexOf('\\t') >= 0 ? r.split('\t') : r.split(',');
+      return cells.map(function(c) { return c.trim().replace(/^"|"$/g, ''); });
     });
-    
-    // Fill data starting from row 0, col 0 (col A = 序号, auto-fill)
-    parsed.forEach((rowData, ri) => {
-      rowData.forEach((val, ci) => {
-        const col = ci + 0; // Start from col A=0
+    parsed.forEach(function(rowData, ri) {
+      rowData.forEach(function(val, ci) {
+        const col = ci + 0;
         if (col < STATE.cols && ri < STATE.rows) {
           STATE.data[ri][col] = val;
-          // Auto-number column A
           STATE.data[ri][0] = String(ri + 1);
         }
       });
     });
-    
-    // If we need more rows
     if (parsed.length > STATE.rows) {
       STATE.rows = parsed.length + 5;
       while (STATE.data.length < STATE.rows) {
         STATE.data.push(Array(STATE.cols).fill(''));
       }
     }
-    
     renderSheet();
-    showToast(`已粘贴 ${parsed.length} 行数据`, 'success');
+    showToast('已粘贴 ' + parsed.length + ' 行数据', 'success');
   } catch(e) {
     showToast('粘贴失败: ' + e.message, 'error');
   }
@@ -699,48 +674,42 @@ async function pasteFromClipboard() {
 async function importFile(file) {
   if (!file) return;
   showToast('正在导入文件...', 'info');
-  
   const formData = new FormData();
   formData.append('file', file);
-  
   try {
-    const resp = await fetch(`${STATE.apiBase}/api/sheets/import`, {
-      method: 'POST',
-      body: formData,
+    const resp = await fetch(STATE.apiBase + '/api/sheets/import', {
+      method: 'POST', body: formData,
     });
     const result = await resp.json();
     if (result.success && result.data) {
       STATE.importBuffer = result.data;
-      showToast(`文件 "${file.name}" 导入成功，${result.data.length} 行`, 'success');
-      // Apply to sheet
-      result.data.forEach((row, ri) => {
-        Object.entries(row).forEach(([key, val]) => {
+      showToast('文件 "' + file.name + '" 导入成功，' + result.data.length + ' 行', 'success');
+      result.data.forEach(function(row, ri) {
+        Object.entries(row).forEach(function(_ref) {
+          const key = _ref[0], val = _ref[1];
           const colIdx = COLUMNS.indexOf(key);
           if (colIdx >= 0 && ri < STATE.rows) {
             STATE.data[ri][colIdx] = String(val || '');
           }
         });
-        // Auto-number
         STATE.data[ri][0] = String(ri + 1);
       });
       renderSheet();
     } else {
-      // Fallback: parse locally
       const text = await file.text();
       pasteText(text);
     }
   } catch(e) {
-    // Fallback to local parsing
     const text = await file.text();
     pasteText(text);
   }
 }
 
 function pasteText(text) {
-  const rows = text.split('\n').filter(r => r.trim());
-  rows.forEach((rowData, ri) => {
-    const cells = rowData.includes('\t') ? rowData.split('\t') : rowData.split(',');
-    cells.forEach((val, ci) => {
+  const rows = text.split('\n').filter(function(r) { return r.trim(); });
+  rows.forEach(function(rowData, ri) {
+    const cells = rowData.indexOf('\\t') >= 0 ? rowData.split('\t') : rowData.split(',');
+    cells.forEach(function(val, ci) {
       if (ci < STATE.cols && ri < STATE.rows) {
         STATE.data[ri][ci] = val.trim().replace(/^"|"$/g, '');
       }
@@ -754,19 +723,16 @@ function pasteText(text) {
     }
   }
   renderSheet();
-  showToast(`已导入 ${rows.length} 行`, 'success');
+  showToast('已导入 ' + rows.length + ' 行', 'success');
 }
 
 function confirmImport() {
-  if (STATE.importBuffer) {
-    // Already applied above
-    STATE.importBuffer = null;
-  }
+  if (STATE.importBuffer) STATE.importBuffer = null;
 }
 
 async function exportFile() {
   try {
-    const resp = await fetch(`${STATE.apiBase}/api/sheets/export`, {
+    const resp = await fetch(STATE.apiBase + '/api/sheets/export', {
       method: 'POST',
       headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ data: STATE.data, columns: COLUMNS, colNames: COL_NAMES }),
@@ -776,12 +742,11 @@ async function exportFile() {
       const url = URL.createObjectURL(blob);
       const a = document.createElement('a');
       a.href = url;
-      a.download = `配置清单_${new Date().toISOString().slice(0,10)}.xlsx`;
+      a.download = '配置清单_' + new Date().toISOString().slice(0,10) + '.xlsx';
       a.click();
       URL.revokeObjectURL(url);
       showToast('导出成功', 'success');
     } else {
-      // Fallback: download as CSV
       exportAsCSV();
     }
   } catch(e) {
@@ -790,22 +755,20 @@ async function exportFile() {
 }
 
 function exportAsCSV() {
-  let csv = COLUMNS.join(',') + '\n';
-  STATE.data.forEach(row => {
-    csv += row.map(c => `"${c}"`).join(',') + '\n';
-  });
-  const blob = new Blob(['\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
+  let csv = COLUMNS.join(',') + '\\n';
+  STATE.data.forEach(function(row) { csv += row.map(function(c) { return '"' + c + '"'; }).join(',') + '\\n'; });
+  const blob = new Blob(['\\ufeff' + csv], { type: 'text/csv;charset=utf-8;' });
   const url = URL.createObjectURL(blob);
   const a = document.createElement('a');
   a.href = url;
-  a.download = `配置清单_${new Date().toISOString().slice(0,10)}.csv`;
+  a.download = '配置清单_' + new Date().toISOString().slice(0,10) + '.csv';
   a.click();
   URL.revokeObjectURL(url);
   showToast('已导出 CSV 文件', 'success');
 }
 
 function newSheet() {
-  STATE.data = Array.from({ length: 30 }, (_, ri) => {
+  STATE.data = Array.from({ length: 30 }, function(_, ri) {
     const row = Array(STATE.cols).fill('');
     row[0] = String(ri + 1);
     return row;
@@ -817,322 +780,408 @@ function newSheet() {
 // ==================== MODES ====================
 function setMode(mode) {
   STATE.mode = mode;
-  const labels = { learn: '学习模式', semi: '半自动模式', auto: '全自动模式' };
-  const icons = { learn: 'fa-graduation-cap', semi: 'fa-robot', auto: 'fa-wand-magic-sparkles' };
-  
-  // Update all mode buttons
-  document.querySelectorAll('.mode-btn').forEach(b => b.classList.toggle('active', b.dataset.mode === mode));
-  document.getElementById('modeIndicator').innerHTML = `<i class="fa-solid ${icons[mode]}"></i> ${labels[mode]}`;
-  document.getElementById('aiModeLabel').textContent = labels[mode];
-  
-  // Show AI dialog in semi and auto modes
-  if (mode !== 'learn') {
-    toggleAIDialog(true);
-  }
-  
-  // Auto mode: show config button
-  if (mode === 'auto') {
-    showToast('🚀 全自动模式已开启。导入需求后点击「全自动配置」一键生成', 'info');
-  } else if (mode === 'semi') {
-    showToast('🤖 半自动模式已开启。填写配置内容时 AI 将实时提供建议', 'info');
-  } else {
-    showToast('🎓 学习模式已开启。上传知识库文件让 AI 学习产品知识', 'info');
-  }
+  var labels = { learn: '学习模式', semi: '半自动模式', auto: '全自动模式' };
+  var icons = { learn: 'fa-graduation-cap', semi: 'fa-robot', auto: 'fa-wand-magic-sparkles' };
+  document.querySelectorAll('.mode-btn').forEach(function(b) { b.classList.toggle('active', b.dataset.mode === mode); });
+  document.getElementById('modeIndicator').innerHTML = '<i class="fa-solid ' + icons[mode] + '"></i> ' + labels[mode];
+  var ml = document.getElementById('aiModeLabel');
+  if (ml) ml.textContent = labels[mode];
+  var mli = document.getElementById('aiModeLabelInner');
+  if (mli) mli.textContent = labels[mode];
+  if (mode !== 'learn') toggleAIDialog(true);
+  if (mode === 'auto') showToast('全自动模式已开启', 'info');
+  else if (mode === 'semi') showToast('半自动模式已开启', 'info');
+  else showToast('学习模式已开启', 'info');
 }
 
 // ==================== AI DIALOG ====================
 function toggleAIDialog(forceShow) {
-  const dialog = document.getElementById('aiDialog');
-  const controls = document.getElementById('aiControls');
-  const isVisible = forceShow === true ? true : forceShow === false ? false : dialog.style.display !== 'none';
-  
-  dialog.style.display = isVisible ? 'none' : 'flex';
-  controls.style.display = isVisible ? 'flex' : 'none';
+  var dialog = document.getElementById('aiDialog');
+  var fab = document.getElementById('aiFab');
+  var isVisible = forceShow === true ? false : forceShow === false ? true : !dialog.classList.contains('hidden');
+  dialog.classList.toggle('hidden', isVisible);
+  fab.style.display = isVisible ? '' : 'none';
   STATE.aiDialogVisible = !isVisible;
-  
-  if (STATE.aiDialogVisible) {
-    document.getElementById('aiInput').focus();
-  }
-}
-
-function sendAIMessage() {
-  const input = document.getElementById('aiInput');
-  const text = input.value.trim();
-  if (!text) return;
-  
-  const body = document.getElementById('aiBody');
-  
-  // Add user message
-  body.innerHTML += `<div class="ai-msg user">${text}</div>`;
-  input.value = '';
-  
-  // Show typing indicator
-  body.innerHTML += `<div class="ai-msg bot" id="aiTyping"><i class="fa-solid fa-spinner fa-spin"></i> 思考中...</div>`;
-  body.scrollTop = body.scrollHeight;
-  
-  // Call AI API
-  fetch(`${STATE.apiBase}/api/ai/query`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({
-      query: text,
-      mode: STATE.mode,
-      context: { currentCell: STATE.currentCell },
-    }),
-  })
-  .then(r => r.json())
-  .then(result => {
-    const typing = document.getElementById('aiTyping');
-    if (typing) typing.remove();
-    const reply = result.data?.reply || result.data?.answer || '抱歉，AI 暂时无法回答。请检查后端服务是否正常运行。';
-    body.innerHTML += `<div class="ai-msg bot">${reply}</div>`;
-    body.scrollTop = body.scrollHeight;
-    
-    // Save to history
-    STATE.history.push({ role: 'user', content: text });
-    STATE.history.push({ role: 'assistant', content: reply });
-  })
-  .catch(e => {
-    const typing = document.getElementById('aiTyping');
-    if (typing) typing.remove();
-    body.innerHTML += `<div class="ai-msg bot">⚠️ AI 服务连接失败：${e.message}。请确保后端服务正在运行。</div>`;
-    body.scrollTop = body.scrollHeight;
-  });
-}
-
-let aiOpacity = 1;
-function toggleAIOpacity() {
-  aiOpacity = aiOpacity === 1 ? 0.7 : aiOpacity === 0.7 ? 0.4 : 1;
-  document.getElementById('aiDialog').style.opacity = aiOpacity;
-}
-
-function toggleAILock() {
-  STATE.aiLocked = !STATE.aiLocked;
-  document.getElementById('aiLockIcon').className = STATE.aiLocked ? 'fa-solid fa-lock' : 'fa-solid fa-lock-open';
-  document.getElementById('aiHeader').style.cursor = STATE.aiLocked ? 'default' : 'grab';
+  if (STATE.aiDialogVisible) document.getElementById('aiInput').focus();
 }
 
 function minimizeAI() {
   document.getElementById('aiDialog').classList.toggle('minimized');
 }
 
+function setAIOpacity(val) {
+  var opacity = val / 100;
+  document.getElementById('aiDialog').style.opacity = opacity;
+  document.getElementById('aiOpacityLabel').textContent = val + '%';
+}
+
+function sendAIMessage() {
+  var input = document.getElementById('aiInput');
+  var text = input.value.trim();
+  if (!text) return;
+  var body = document.getElementById('aiBody');
+  body.innerHTML += '<div class="ai-msg user">' + text + '</div>';
+  input.value = '';
+  body.innerHTML += '<div class="ai-msg bot" id="aiTyping"><i class="fa-solid fa-spinner fa-spin"></i> 思考中...</div>';
+  body.scrollTop = body.scrollHeight;
+  var headers = { 'Content-Type': 'application/json' };
+  if (STATE.token) headers['Authorization'] = 'Bearer ' + STATE.token;
+  fetch(STATE.apiBase + '/api/ai/query', {
+    method: 'POST',
+    headers: headers,
+    body: JSON.stringify({ prompt: text, mode: STATE.mode, context: JSON.stringify({ currentCell: STATE.currentCell }) }),
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(result) {
+    var typing = document.getElementById('aiTyping');
+    if (typing) typing.remove();
+    var reply = (result.data && result.data.response) || (result.data && result.data.answer) || '抱歉，AI 暂时无法回答。';
+    body.innerHTML += '<div class="ai-msg bot">' + reply + '</div>';
+    body.scrollTop = body.scrollHeight;
+    STATE.history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
+  })
+  .catch(function(e) {
+    var typing = document.getElementById('aiTyping');
+    if (typing) typing.remove();
+    body.innerHTML += '<div class="ai-msg bot">AI 服务连接失败: ' + e.message + '</div>';
+    body.scrollTop = body.scrollHeight;
+  });
+}
+
 // ==================== AUTO CONFIGURE ====================
 async function autoConfigure() {
-  if (STATE.mode !== 'auto') {
-    showToast('请先切换到全自动模式', 'error');
-    return;
-  }
-  
-  // Check if there's data in A-E columns
-  const hasDemand = STATE.data.some(row => row[1]?.trim() || row[2]?.trim());
-  if (!hasDemand) {
-    showToast('请先在 A-E 列导入需求数据', 'error');
-    return;
-  }
-  
-  showToast('🚀 开始全自动配置...', 'info');
-  
+  if (STATE.mode !== 'auto') { showToast('请先切换到全自动模式', 'error'); return; }
+  var hasDemand = STATE.data.some(function(row) { return row[1] && row[1].trim() || row[2] && row[2].trim(); });
+  if (!hasDemand) { showToast('请先在 A-E 列导入需求数据', 'error'); return; }
+  showToast('开始全自动配置...', 'info');
   try {
-    const resp = await fetch(`${STATE.apiBase}/api/ai/auto-configure`, {
+    var headers = { 'Content-Type': 'application/json' };
+    if (STATE.token) headers['Authorization'] = 'Bearer ' + STATE.token;
+    var resp = await fetch(STATE.apiBase + '/api/ai/auto-configure', {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: headers,
       body: JSON.stringify({
-        data: STATE.data.map(row => ({
-          A: row[0], B: row[1], C: row[2], D: row[3], E: row[4]
-        })),
+        data: STATE.data.map(function(row) { return { A: row[0], B: row[1], C: row[2], D: row[3], E: row[4] }; }),
         columns: COLUMNS,
       }),
     });
-    const result = await resp.json();
-    
+    var result = await resp.json();
     if (result.success && result.data) {
-      result.data.forEach((row, ri) => {
+      result.data.forEach(function(row, ri) {
         if (ri < STATE.rows) {
-          Object.entries(row).forEach(([key, val]) => {
-            const ci = COLUMNS.indexOf(key);
-            if (ci >= 0 && ci < STATE.cols) {
-              STATE.data[ri][ci] = String(val || '');
-            }
+          Object.entries(row).forEach(function(_ref2) {
+            var key = _ref2[0], val = _ref2[1];
+            var ci = COLUMNS.indexOf(key);
+            if (ci >= 0 && ci < STATE.cols) STATE.data[ri][ci] = String(val || '');
           });
         }
       });
       renderSheet();
-      showToast('全自动配置完成 ✅', 'success');
+      showToast('全自动配置完成', 'success');
     } else {
-      // Fallback: AI matching per row
-      for (let ri = 0; ri < Math.min(STATE.rows, STATE.data.length); ri++) {
-        const demandName = STATE.data[ri][1];
-        const demandSpec = STATE.data[ri][2];
+      for (var ri = 0; ri < Math.min(STATE.rows, STATE.data.length); ri++) {
+        var demandName = STATE.data[ri][1];
+        var demandSpec = STATE.data[ri][2];
         if (!demandName && !demandSpec) continue;
-        
         try {
-          const matchResp = await fetch(`${STATE.apiBase}/api/ai/match`, {
+          var matchResp = await fetch(STATE.apiBase + '/api/ai/match', {
             method: 'POST',
-            headers: { 'Content-Type': 'application/json' },
-            body: JSON.stringify({
-              demand_name: demandName,
-              demand_spec: demandSpec,
-              knowledge: STATE.kbFiles,
-            }),
+            headers: headers,
+            body: JSON.stringify({ demand_name: demandName, demand_spec: demandSpec, knowledge: STATE.kbFiles }),
           });
-          const matchResult = await matchResp.json();
+          var matchResult = await matchResp.json();
           if (matchResult.success && matchResult.data) {
             STATE.data[ri][7] = matchResult.data.product_name || '';
             STATE.data[ri][8] = matchResult.data.spec || '';
             STATE.data[ri][9] = matchResult.data.brand || '';
             STATE.data[ri][10] = matchResult.data.model || '';
             STATE.data[ri][11] = matchResult.data.internal_code || '';
-            STATE.data[ri][12] = STATE.data[ri][4] || ''; // Copy quantity
-            STATE.data[ri][13] = STATE.data[ri][3] || ''; // Copy unit
+            STATE.data[ri][12] = STATE.data[ri][4] || '';
+            STATE.data[ri][13] = STATE.data[ri][3] || '';
             STATE.data[ri][14] = matchResult.data.price || '';
             STATE.data[ri][15] = matchResult.data.total || '';
             STATE.data[ri][17] = matchResult.data.unmatched || '';
           }
-        } catch(e) {
-          console.warn(`Row ${ri+1} match failed:`, e);
-        }
+        } catch(e) { console.warn('Row ' + (ri+1) + ' match failed:', e); }
       }
       renderSheet();
-      showToast('全自动配置完成 ✅（本地模式）', 'success');
+      showToast('全自动配置完成（本地模式）', 'success');
     }
-  } catch(e) {
-    showToast('自动配置失败: ' + e.message, 'error');
-  }
+  } catch(e) { showToast('自动配置失败: ' + e.message, 'error'); }
 }
 
 // ==================== KNOWLEDGE & MEMORY ====================
 async function uploadKnowledge(files) {
-  Array.from(files).forEach(file => {
+  Array.from(files).forEach(function(file) {
     STATE.kbFiles.push(file.name);
-    showToast(`已添加知识库: ${file.name}`, 'success');
+    showToast('已添加知识库: ' + file.name, 'success');
   });
-  
-  const list = document.getElementById('kbList');
+  var list = document.getElementById('kbList');
   if (STATE.kbFiles.length > 0) {
-    list.innerHTML = STATE.kbFiles.map(f => 
-      `<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;justify-content:space-between;">
-        <span><i class="fa-solid fa-file"></i> ${f}</span>
-        <span style="color:var(--green);font-size:11px;">已学习 ✓</span>
-      </div>`
-    ).join('');
+    list.innerHTML = STATE.kbFiles.map(function(f) {
+      return '<div style="padding:6px 0;border-bottom:1px solid var(--border);font-size:12px;display:flex;justify-content:space-between;">'
+        + '<span><i class="fa-solid fa-file"></i> ' + f + '</span>'
+        + '<span style="color:var(--green);font-size:11px;">已学习 ✓</span>'
+        + '</div>';
+    }).join('');
   }
 }
 
 async function exportMemory() {
   try {
-    const resp = await fetch(`${STATE.apiBase}/api/memory/export`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+    var resp = await fetch(STATE.apiBase + '/api/memory/export', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
       body: JSON.stringify({ history: STATE.history, kbFiles: STATE.kbFiles }),
     });
     if (resp.ok) {
-      const blob = await resp.blob();
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `memory_${new Date().toISOString().slice(0,10)}.mem`;
-      a.click();
-      URL.revokeObjectURL(url);
+      var blob = await resp.blob();
+      var url = URL.createObjectURL(blob);
+      var a = document.createElement('a');
+      a.href = url; a.download = 'memory_' + new Date().toISOString().slice(0,10) + '.mem';
+      a.click(); URL.revokeObjectURL(url);
       showToast('记忆导出成功', 'success');
-    } else {
-      // Fallback: export locally
-      const memory = {
-        version: '1.0',
-        exportedAt: new Date().toISOString(),
-        history: STATE.history,
-        kbFiles: STATE.kbFiles,
-      };
-      const blob = new Blob([JSON.stringify(memory, null, 2)], { type: 'application/json' });
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement('a');
-      a.href = url;
-      a.download = `memory_${new Date().toISOString().slice(0,10)}.mem`;
-      a.click();
-      URL.revokeObjectURL(url);
-      showToast('记忆导出成功（本地）', 'success');
-    }
-  } catch(e) {
-    showToast('导出失败: ' + e.message, 'error');
-  }
+    } else { fallbackExportMemory(); }
+  } catch(e) { fallbackExportMemory(); }
+}
+
+function fallbackExportMemory() {
+  var memory = { version: '1.0', exportedAt: new Date().toISOString(), history: STATE.history, kbFiles: STATE.kbFiles };
+  var blob = new Blob([JSON.stringify(memory, null, 2)], { type: 'application/json' });
+  var url = URL.createObjectURL(blob);
+  var a = document.createElement('a');
+  a.href = url; a.download = 'memory_' + new Date().toISOString().slice(0,10) + '.mem';
+  a.click(); URL.revokeObjectURL(url);
+  showToast('记忆导出成功（本地）', 'success');
 }
 
 async function importMemory(file) {
   if (!file) return;
   try {
-    const text = await file.text();
-    const memory = JSON.parse(text);
+    var text = await file.text();
+    var memory = JSON.parse(text);
     if (memory.history) STATE.history = memory.history;
     if (memory.kbFiles) STATE.kbFiles = memory.kbFiles;
-    showToast(`记忆导入成功: ${memory.history?.length || 0} 条对话记录`, 'success');
-  } catch(e) {
-    showToast('导入失败: 文件格式错误', 'error');
-  }
+    showToast('记忆导入成功: ' + (memory.history ? memory.history.length : 0) + ' 条对话记录', 'success');
+  } catch(e) { showToast('导入失败: 文件格式错误', 'error'); }
 }
 
 async function syncMemory() {
-  const enabled = document.getElementById('syncToggle').checked;
-  if (!enabled) {
-    showToast('请先勾选「启用云同步」', 'error');
-    return;
-  }
+  var enabled = document.getElementById('syncToggle').checked;
+  if (!enabled) { showToast('请先勾选「启用云同步」', 'error'); return; }
   try {
-    const resp = await fetch(`${STATE.apiBase}/api/memory/sync`, {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
-      body: JSON.stringify({ history: STATE.history, enabled }),
+    var resp = await fetch(STATE.apiBase + '/api/memory/sync', {
+      method: 'POST', headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ history: STATE.history, enabled: enabled }),
     });
-    if (resp.ok) {
-      showToast('云端同步成功 ✅', 'success');
-    } else {
-      showToast('同步失败，请检查网络连接', 'error');
-    }
-  } catch(e) {
-    showToast('同步失败: ' + e.message, 'error');
-  }
+    if (resp.ok) showToast('云端同步成功', 'success');
+    else showToast('同步失败', 'error');
+  } catch(e) { showToast('同步失败: ' + e.message, 'error'); }
 }
 
 // ==================== UI HELPERS ====================
 function showModal(name) {
-  document.getElementById(`modal${name.charAt(0).toUpperCase() + name.slice(1)}`).style.display = 'flex';
+  document.getElementById('modal' + name.charAt(0).toUpperCase() + name.slice(1)).style.display = 'flex';
 }
-
 function hideModal(name) {
-  document.getElementById(`modal${name.charAt(0).toUpperCase() + name.slice(1)}`).style.display = 'none';
+  document.getElementById('modal' + name.charAt(0).toUpperCase() + name.slice(1)).style.display = 'none';
 }
-
-function showToast(msg, type = 'info') {
-  const el = document.getElementById('toast');
+function showToast(msg, type) {
+  var el = document.getElementById('toast');
   el.textContent = msg;
-  el.className = `toast ${type} show`;
+  el.className = 'toast ' + (type || 'info') + ' show';
   clearTimeout(el._timer);
-  el._timer = setTimeout(() => el.classList.remove('show'), 3500);
+  el._timer = setTimeout(function() { el.classList.remove('show'); }, 3500);
+}
+function updateStatus() {
+  var rowCount = STATE.data.filter(function(r) { return r.some(function(c) { return c && c.trim(); }); }).length;
+  document.getElementById('statusRows').textContent = rowCount + ' 行';
+  document.getElementById('statusCols').textContent = STATE.cols + ' 列';
 }
 
-function updateStatus() {
-  const rowCount = STATE.data.filter(r => r.some(c => c?.trim())).length;
-  document.getElementById('statusRows').textContent = `${rowCount} 行`;
-  document.getElementById('statusCols').textContent = `${STATE.cols} 列`;
+// ==================== PROFILE ====================
+function loadProfile() {
+  if (!STATE.token) return;
+  fetch(STATE.apiBase + '/api/auth/me', {
+    headers: { 'Authorization': 'Bearer ' + STATE.token }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.success) {
+      STATE.user = res.data;
+      document.getElementById('profUsername').value = res.data.username || '';
+      document.getElementById('profDisplayName').value = res.data.display_name || '';
+      document.getElementById('profEmail').value = res.data.email || '';
+    }
+  })
+  .catch(function() {});
+}
+
+async function updateProfile() {
+  var displayName = document.getElementById('profDisplayName').value.trim();
+  var email = document.getElementById('profEmail').value.trim();
+  try {
+    var resp = await fetch(STATE.apiBase + '/api/auth/profile', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + STATE.token },
+      body: JSON.stringify({ display_name: displayName, email: email }),
+    });
+    var res = await resp.json();
+    if (res.success) {
+      STATE.user = res.data;
+      document.getElementById('sideName').textContent = res.data.display_name || res.data.username;
+      document.getElementById('sideAvatar').textContent = (res.data.display_name || res.data.username || 'U')[0].toUpperCase();
+      showToast('资料更新成功', 'success');
+    } else {
+      showToast(res.error || '更新失败', 'error');
+    }
+  } catch(e) { showToast('更新失败: ' + e.message, 'error'); }
+}
+
+async function changePassword() {
+  var oldPwd = document.getElementById('profOldPwd').value.trim();
+  var newPwd = document.getElementById('profNewPwd').value.trim();
+  var confirmPwd = document.getElementById('profConfirmPwd').value.trim();
+  if (!oldPwd || !newPwd || !confirmPwd) { showToast('请填写所有密码字段', 'error'); return; }
+  if (newPwd !== confirmPwd) { showToast('两次密码不一致', 'error'); return; }
+  if (newPwd.length < 6) { showToast('新密码至少6位', 'error'); return; }
+  try {
+    var resp = await fetch(STATE.apiBase + '/api/auth/password', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + STATE.token },
+      body: JSON.stringify({ old_password: oldPwd, new_password: newPwd }),
+    });
+    var res = await resp.json();
+    if (res.success) {
+      showToast('密码修改成功', 'success');
+      document.getElementById('profOldPwd').value = '';
+      document.getElementById('profNewPwd').value = '';
+      document.getElementById('profConfirmPwd').value = '';
+    } else {
+      showToast(res.error || '修改失败', 'error');
+    }
+  } catch(e) { showToast('修改失败: ' + e.message, 'error'); }
+}
+
+// ==================== API SETTINGS ====================
+var modelsData = null;
+
+async function loadModels() {
+  try {
+    var resp = await fetch(STATE.apiBase + '/api/models');
+    var res = await resp.json();
+    if (res.success) {
+      modelsData = res.data;
+      var sel = document.getElementById('apiProvider');
+      sel.innerHTML = '<option value="">请选择提供商</option>';
+      Object.entries(res.data).forEach(function(_ref3) {
+        var key = _ref3[0], val = _ref3[1];
+        sel.innerHTML += '<option value="' + key + '">' + val.name + '</option>';
+      });
+    }
+  } catch(e) { console.warn('Load models failed:', e); }
+}
+
+function onProviderChange() {
+  var provider = document.getElementById('apiProvider').value;
+  var modelSel = document.getElementById('apiModel');
+  var baseInput = document.getElementById('apiBase');
+  var hint = document.getElementById('apiBaseHint');
+  modelSel.innerHTML = '<option value="">请选择模型</option>';
+  if (!provider || !modelsData || !modelsData[provider]) {
+    hint.textContent = '选择提供商后自动填充';
+    return;
+  }
+  var data = modelsData[provider];
+  baseInput.value = data.base;
+  hint.textContent = 'Base URL: ' + data.base;
+  data.models.forEach(function(m) {
+    modelSel.innerHTML += '<option value="' + m.id + '">' + m.name + '</option>';
+  });
+}
+
+function togglePwdVis() {
+  var input = document.getElementById('apiKey');
+  var icon = document.getElementById('apiKeyIcon');
+  if (input.type === 'password') {
+    input.type = 'text';
+    icon.className = 'fa-regular fa-eye-slash';
+  } else {
+    input.type = 'password';
+    icon.className = 'fa-regular fa-eye';
+  }
+}
+
+function loadApiSettings() {
+  if (!STATE.token) return;
+  fetch(STATE.apiBase + '/api/auth/api-settings', {
+    headers: { 'Authorization': 'Bearer ' + STATE.token }
+  })
+  .then(function(r) { return r.json(); })
+  .then(function(res) {
+    if (res.success) {
+      document.getElementById('apiKey').value = res.data.api_key || '';
+      document.getElementById('apiBase').value = res.data.api_base || 'https://api.openai.com/v1';
+      if (modelsData && res.data.api_base) {
+        for (var _i = 0, _Object$entries = Object.entries(modelsData); _i < _Object$entries.length; _i++) {
+          var _ref4 = _Object$entries[_i], key = _ref4[0], val = _ref4[1];
+          if (val.base === res.data.api_base) {
+            document.getElementById('apiProvider').value = key;
+            onProviderChange();
+            if (res.data.api_model) {
+              document.getElementById('apiModel').value = res.data.api_model;
+            }
+            break;
+          }
+        }
+      }
+      if (res.data.api_model) {
+        document.getElementById('apiModel').value = res.data.api_model;
+      }
+    }
+  })
+  .catch(function() {});
+}
+
+async function saveApiSettings() {
+  var apiKey = document.getElementById('apiKey').value.trim();
+  var apiModel = document.getElementById('apiModel').value;
+  var apiBase = document.getElementById('apiBase').value.trim();
+  var resultEl = document.getElementById('apiSaveResult');
+  try {
+    var resp = await fetch(STATE.apiBase + '/api/auth/api-settings', {
+      method: 'PUT',
+      headers: { 'Content-Type': 'application/json', 'Authorization': 'Bearer ' + STATE.token },
+      body: JSON.stringify({ api_key: apiKey, api_model: apiModel, api_base: apiBase }),
+    });
+    var res = await resp.json();
+    if (res.success) {
+      resultEl.innerHTML = '<span style="color:var(--green);">保存成功</span>';
+      setTimeout(function() { resultEl.innerHTML = ''; }, 2000);
+    } else {
+      resultEl.innerHTML = '<span style="color:var(--red);">失败: ' + (res.error || '') + '</span>';
+    }
+  } catch(e) {
+    resultEl.innerHTML = '<span style="color:var(--red);">保存失败</span>';
+  }
 }
 
 // ==================== EVENT LISTENERS ====================
 function setupEventListeners() {
   // Ribbon tabs
-  document.querySelectorAll('.ribbon-tab').forEach(tab => {
-    tab.addEventListener('click', () => {
-      document.querySelectorAll('.ribbon-tab').forEach(t => t.classList.remove('active'));
-      document.querySelectorAll('.ribbon-content').forEach(c => c.classList.remove('active'));
+  document.querySelectorAll('.ribbon-tab').forEach(function(tab) {
+    tab.addEventListener('click', function() {
+      document.querySelectorAll('.ribbon-tab').forEach(function(t) { t.classList.remove('active'); });
+      document.querySelectorAll('.ribbon-content').forEach(function(c) { c.classList.remove('active'); });
       tab.classList.add('active');
-      document.getElementById(`tab-${tab.dataset.tab}`).classList.add('active');
+      document.getElementById('tab-' + tab.dataset.tab).classList.add('active');
     });
   });
-  
-  // AI Dialog dragging
-  const dialog = document.getElementById('aiDialog');
-  const header = document.getElementById('aiHeader');
-  let isDragging = false, dragStartX, dragStartY, dragOrigX, dragOrigY;
-  
-  header.addEventListener('mousedown', (e) => {
-    if (STATE.aiLocked) return;
+
+  // AI Dialog dragging - FREE DRAGGING
+  var dialog = document.getElementById('aiDialog');
+  var header = document.getElementById('aiHeader');
+  var isDragging = false, dragStartX = 0, dragStartY = 0, dragOrigX = 0, dragOrigY = 0;
+  header.addEventListener('mousedown', function(e) {
     if (e.target.closest('.ai-header-actions')) return;
     isDragging = true;
     dragStartX = e.clientX;
@@ -1140,34 +1189,29 @@ function setupEventListeners() {
     dragOrigX = dialog.offsetLeft;
     dragOrigY = dialog.offsetTop;
   });
-  
-  document.addEventListener('mousemove', (e) => {
+  document.addEventListener('mousemove', function(e) {
     if (!isDragging) return;
-    dialog.style.left = `${dragOrigX + (e.clientX - dragStartX)}px`;
-    dialog.style.top = `${dragOrigY + (e.clientY - dragStartY)}px`;
+    dialog.style.left = (dragOrigX + (e.clientX - dragStartX)) + 'px';
+    dialog.style.top = (dragOrigY + (e.clientY - dragStartY)) + 'px';
     dialog.style.right = 'auto';
     dialog.style.bottom = 'auto';
   });
-  
-  document.addEventListener('mouseup', () => { isDragging = false; });
-  
+  document.addEventListener('mouseup', function() { isDragging = false; });
+
   // Import zone drag & drop
-  const importZone = document.getElementById('import-zone');
+  var importZone = document.getElementById('importZone');
   if (importZone) {
-    importZone.addEventListener('dragover', (e) => { e.preventDefault(); importZone.classList.add('dragover'); });
-    importZone.addEventListener('dragleave', () => { importZone.classList.remove('dragover'); });
-    importZone.addEventListener('drop', (e) => {
+    importZone.addEventListener('dragover', function(e) { e.preventDefault(); importZone.classList.add('dragover'); });
+    importZone.addEventListener('dragleave', function() { importZone.classList.remove('dragover'); });
+    importZone.addEventListener('drop', function(e) {
       e.preventDefault();
       importZone.classList.remove('dragover');
       if (e.dataTransfer.files.length) importFile(e.dataTransfer.files[0]);
     });
   }
-  
-  // Keyboard shortcuts
-  document.addEventListener('keydown', (e) => {
-    if ((e.ctrlKey || e.metaKey) && e.key === 'v') {
-      // Handled by our paste button
-    }
+
+  // Keyboard: Ctrl+S
+  document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {
       e.preventDefault();
       showToast('表格已自动保存（本地）', 'info');
@@ -1176,7 +1220,33 @@ function setupEventListeners() {
 }
 
 // ==================== START APP ====================
-document.addEventListener('DOMContentLoaded', init);
+(function() {
+  var savedToken = localStorage.getItem('autoconfig_token');
+  if (savedToken) {
+    STATE.token = savedToken;
+    var savedUser = localStorage.getItem('autoconfig_user');
+    if (savedUser) {
+      try {
+        STATE.user = JSON.parse(savedUser);
+        document.getElementById('loginPage').style.display = 'none';
+        document.getElementById('appLayout').style.display = 'flex';
+        var u = STATE.user;
+        document.getElementById('sideAvatar').textContent = (u.display_name || u.username || 'U')[0].toUpperCase();
+        document.getElementById('sideName').textContent = u.display_name || u.username;
+        document.addEventListener('DOMContentLoaded', function() {
+          init();
+          loadModels();
+          loadProfile();
+          loadApiSettings();
+        });
+        return;
+      } catch(e) {}
+    }
+  }
+  document.addEventListener('DOMContentLoaded', function() {
+    document.getElementById('loadingOverlay').style.display = 'none';
+  });
+})();
 </script>
 </body>
 </html>

@@ -18,10 +18,18 @@ from config import AI_API_KEY, AI_MODEL, AI_API_BASE, COLUMNS_18
 class AIClient:
     """OpenAI兼容API客户端，封装AI查询和匹配功能"""
 
-    def __init__(self):
-        self.api_key = AI_API_KEY
-        self.model = AI_MODEL
-        self.api_base = AI_API_BASE.rstrip("/")
+    def __init__(self, api_key: str = None, api_base: str = None, model: str = None):
+        """
+        初始化AI客户端
+        
+        Args:
+            api_key: 用户自定义API Key（优先使用），None则使用全局配置
+            api_base: 用户自定义API Base URL
+            model: 用户自定义模型名
+        """
+        self.api_key = api_key or AI_API_KEY
+        self.model = model or AI_MODEL
+        self.api_base = (api_base or AI_API_BASE).rstrip("/")
         self._available = bool(self.api_key)
 
     def _is_available(self) -> bool:

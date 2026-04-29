@@ -80,9 +80,15 @@ async def serve_app():
 async def root():
     """根路径 - 返回API状态或重定向到前端"""
     from fastapi.responses import RedirectResponse
-    # Check if request accepts HTML (browser) vs JSON (API client)
-    # For simplicity, always redirect to frontend
     return RedirectResponse(url="/app")
+
+
+# API: 获取支持的AI模型列表
+@app.get("/api/models")
+async def get_supported_models():
+    """获取支持的AI模型提供商和模型列表"""
+    from config import SUPPORTED_MODELS
+    return {"success": True, "data": SUPPORTED_MODELS, "error": ""}
 
 
 # ========== 启动事件 ==========

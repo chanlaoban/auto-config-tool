@@ -7,7 +7,8 @@ from datetime import datetime, timezone
 
 from database import get_db
 from models.knowledge import Sheet, LearningLog, KnowledgeBase, KnowledgeItem, Memory
-from routers.auth import get_user_from_token
+from routers.auth import get_current_user
+from models.user import User
 from services.ai_agent import AIClient
 from services.matching_engine import MatchingEngine
 from services.learning_engine import LearningEngine
@@ -49,11 +50,15 @@ class LearnRequest(BaseModel):
 
 # ========== 工具函数 ==========
 
-def get_token_from_header(authorization: str) -> str:
-    """从Authorization header提取token"""
-    if not authorization or not authorization.startswith("Bearer "):
-        raise HTTPException(status_code=401, detail="缺少Bearer token")
-    return authorization.replace("Bearer ", "")
+def create_ai_client(user: User = None) -> AIClient:
+    """创建AI客户端，优先使用用户自定义配置"""
+    if user and user.api_key:
+        return AIClient(
+            api_key=user.api_key,
+            api_base=user.api_base,
+            model=user.api_model,
+        )
+    return AIClient()
 
 
 def load_knowledge_items(knowledge_base_id: int, db: Session) -> list:
@@ -82,13 +87,10 @@ def load_knowledge_items(knowledge_base_id: int, db: Session) -> list:
 @router.post("/query")
 async def ai_query(
     req: AIQueryRequest,
-    authorization: str = Header(default=""),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """通用AI查询 - 带知识库上下文"""
-    token = get_token_from_header(authorization)
-    user = get_user_from_token(token, db)
-
     # 加载知识库上下文
     context = req.context or ""
     if req.knowledge_base_id:
@@ -98,8 +100,8 @@ async def ai_query(
             for item in items[:50]:  # 限制上下文长度
                 context += f"- {item['product_name']} ({item['brand']} {item['model']})\n"
 
-    # 调用AI
-    ai = AIClient()
+    # 调用AI（使用用户自定义配置）
+    ai = create_ai_client(user)
     try:
         result = ai.query(req.prompt, context)
         return {"success": True, "data": {"response": result}, "error": ""}
@@ -110,7 +112,7 @@ async def ai_query(
 @router.post("/match")
 async def match_product(
     req: MatchRequest,
-    authorization: str = Header(default=""),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -119,9 +121,6 @@ async def match_product(
     输入: 需求行数据（B=设备名称, C=招标/需求参数, D=单位, E=数量）
     输出: 匹配到的产品信息（H-R列）
     """
-    token = get_token_from_header(authorization)
-    user = get_user_from_token(token, db)
-
     demand_text = f"{req.demand_row.get('B', '')} {req.demand_row.get('C', '')}"
     knowledge_items = []
 
@@ -135,8 +134,8 @@ async def match_product(
             items = load_knowledge_items(kb.id, db)
             knowledge_items.extend(items)
 
-    # 尝试AI匹配
-    ai = AIClient()
+    # 尝试AI匹配（使用用户自定义配置）
+    ai = create_ai_client(user)
     try:
         result = ai.match_demand_to_product(demand_text, knowledge_items)
         if result:
@@ -179,7 +178,7 @@ async def match_product(
 @router.post("/auto-configure")
 async def auto_configure(
     req: AutoConfigureRequest,
-    authorization: str = Header(default=""),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -191,9 +190,6 @@ async def auto_configure(
     3. 填充H-Q列（产品信息）
     4. 标记R列（不满足参数）
     """
-    token = get_token_from_header(authorization)
-    user = get_user_from_token(token, db)
-
     # 获取表格
     sheet = db.query(Sheet).filter(Sheet.id == req.sheet_id, Sheet.user_id == user.id).first()
     if not sheet:
@@ -221,7 +217,7 @@ async def auto_configure(
     memories = db.query(Memory).filter(Memory.user_id == user.id).order_by(Memory.version.desc()).all()
     memory = memories[0] if memories else None
 
-    ai = AIClient()
+    ai = create_ai_client(user)
     engine = MatchingEngine()
     learning = LearningEngine()
 
@@ -345,7 +341,7 @@ async def auto_configure(
 @router.post("/learn")
 async def learn_from_example(
     req: LearnRequest,
-    authorization: str = Header(default=""),
+    user: User = Depends(get_current_user),
     db: Session = Depends(get_db),
 ):
     """
@@ -353,9 +349,6 @@ async def learn_from_example(
     
     将用户的手动修正记录为学习样本，更新匹配规则
     """
-    token = get_token_from_header(authorization)
-    user = get_user_from_token(token, db)
-
     # 记录学习日志
     log = LearningLog(
         user_id=user.id,
