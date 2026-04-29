@@ -259,8 +259,8 @@ html,body{height:100%;overflow:hidden;font-family:Segoe UI,PingFang SC,Microsoft
             <button class="ribbon-btn" onclick="exportFile()"><i class="fa-regular fa-share-from-square"></i><span class="label">另存导出</span></button>
           </div>
           <div class="ribbon-group">
-            <button class="ribbon-btn" onclick="showToast('撤销', 'info')"><i class="fa-solid fa-arrow-rotate-left"></i><span class="label">撤销</span></button>
-            <button class="ribbon-btn" onclick="showToast('重做', 'info')"><i class="fa-solid fa-arrow-rotate-right"></i><span class="label">重做</span></button>
+            <button class="ribbon-btn" onclick="undoAction()"><i class="fa-solid fa-arrow-rotate-left"></i><span class="label">撤销</span></button>
+            <button class="ribbon-btn" onclick="redoAction()"><i class="fa-solid fa-arrow-rotate-right"></i><span class="label">重做</span></button>
           </div>
           <div class="ribbon-group"><input type="file" id="fileInput" accept=".xlsx,.csv,.txt" style="display:none;" onchange="importFile(this.files[0])"></div>
         </div>
@@ -283,7 +283,7 @@ html,body{height:100%;overflow:hidden;font-family:Segoe UI,PingFang SC,Microsoft
           <div class="ribbon-group"><button class="ribbon-btn" title="增加小数"><i class="fa-solid fa-plus"></i><span class="label">.00</span></button><button class="ribbon-btn" title="减少小数"><i class="fa-solid fa-minus"></i><span class="label">.00</span></button><button class="ribbon-btn" title="货币"><i class="fa-solid fa-dollar-sign"></i></button><button class="ribbon-btn" title="百分比"><i class="fa-solid fa-percent"></i></button></div>
         </div>
         <div class="ribbon-content" id="tab-cells">
-          <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-plus"></i><span class="label">插入行</span></button><button class="ribbon-btn"><i class="fa-solid fa-plus"></i><span class="label">插入列</span></button><button class="ribbon-btn"><i class="fa-solid fa-minus"></i><span class="label">删除行</span></button><button class="ribbon-btn"><i class="fa-solid fa-minus"></i><span class="label">删除列</span></button></div>
+          <div class="ribbon-group"><button class="ribbon-btn" onclick="insertRow()"><i class="fa-solid fa-plus"></i><span class="label">插入行</span></button><button class="ribbon-btn" onclick="insertColumn()"><i class="fa-solid fa-plus"></i><span class="label">插入列</span></button><button class="ribbon-btn" onclick="deleteRow()"><i class="fa-solid fa-minus"></i><span class="label">删除行</span></button><button class="ribbon-btn" onclick="deleteColumn()"><i class="fa-solid fa-minus"></i><span class="label">删除列</span></button></div>
           <div class="ribbon-group"><button class="ribbon-btn"><i class="fa-solid fa-eye-slash"></i><span class="label">隐藏</span></button><button class="ribbon-btn"><i class="fa-solid fa-eye"></i><span class="label">取消隐藏</span></button><button class="ribbon-btn"><i class="fa-solid fa-lock"></i><span class="label">锁定</span></button></div>
         </div>
         <div class="ribbon-content" id="tab-border">
@@ -647,48 +647,44 @@ function onCellKeydown(e, row, col) {
 async function pasteFromClipboard() {
   try {
     const text = await navigator.clipboard.readText();
+    if (!text || !text.trim()) { showToast('剪贴板为空', 'error'); return; }
     var rows = text.split('\n');
-    // Remove trailing empty row if present (from Excel copies)
     if (rows.length > 0 && rows[rows.length-1].trim() === '') rows.pop();
     if (rows.length === 0) { showToast('剪贴板为空', 'error'); return; }
-    // Detect separator: tabs = Excel/Sheet copy, commas = CSV
     var hasTab = false;
     for (var _i = 0; _i < rows.length && _i < 5; _i++) {
       if (rows[_i].indexOf('\t') >= 0) { hasTab = true; break; }
     }
     var parsed = rows.map(function(r) {
       var cells;
-      if (hasTab) {
-        cells = r.split('\t');
-      } else {
-        // Smart CSV parsing: handle quoted fields with commas inside
-        cells = [];
-        var current = '', inQuote = false;
+      if (hasTab) { cells = r.split('\t'); }
+      else {
+        cells = []; var cur = '', inQ = false;
         for (var _c = 0; _c < r.length; _c++) {
           var ch = r[_c];
-          if (ch === '"') { inQuote = !inQuote; }
-          else if (ch === ',' && !inQuote) { cells.push(current.trim()); current = ''; }
-          else { current += ch; }
+          if (ch === '"') { inQ = !inQ; }
+          else if (ch === ',' && !inQ) { cells.push(cur.trim()); cur = ''; }
+          else { cur += ch; }
         }
-        cells.push(current.trim());
+        cells.push(cur.trim());
       }
       return cells.map(function(c) { return c.replace(/^"|"$/g, ''); });
     });
-    parsed.forEach(function(rowData, ri) {
-      rowData.forEach(function(val, ci) {
-        const col = ci + 0;
-        if (col < STATE.cols && ri < STATE.rows) {
-          STATE.data[ri][col] = val;
-          STATE.data[ri][0] = String(ri + 1);
-        }
-      });
-    });
-    if (parsed.length > STATE.rows) {
-      STATE.rows = parsed.length + 5;
+    // Paste starting from current cell
+    var sRow = STATE.currentCell.row, sCol = STATE.currentCell.col;
+    var endRow = sRow + parsed.length;
+    if (endRow > STATE.rows) {
+      STATE.rows = endRow + 5;
       while (STATE.data.length < STATE.rows) {
         STATE.data.push(Array(STATE.cols).fill(''));
       }
     }
+    parsed.forEach(function(rowData, ri) {
+      rowData.forEach(function(val, ci) {
+        var r = sRow + ri, c = sCol + ci;
+        if (c < STATE.cols && r < STATE.rows) { STATE.data[r][c] = val; }
+      });
+    });
     renderSheet();
     showToast('已粘贴 ' + parsed.length + ' 行数据', 'success');
   } catch(e) {
@@ -707,8 +703,16 @@ async function importFile(file) {
       method: 'POST', body: formData,
     });
     const result = await resp.json();
-    if (result.success && result.data) {
+    if (result.success && result.data && result.data.length > 0) {
       STATE.importBuffer = result.data;
+      // Auto-expand rows if needed
+      var neededRows = result.data.length + 5;
+      if (neededRows > STATE.rows) {
+        STATE.rows = neededRows;
+        while (STATE.data.length < STATE.rows) {
+          STATE.data.push(Array(STATE.cols).fill(''));
+        }
+      }
       showToast('文件 "' + file.name + '" 导入成功，' + result.data.length + ' 行', 'success');
       result.data.forEach(function(row, ri) {
         Object.entries(row).forEach(function(_ref) {
@@ -722,12 +726,20 @@ async function importFile(file) {
       });
       renderSheet();
     } else {
-      const text = await file.text();
+      // Fallback: read file as text with UTF-8 BOM handling
+      var text = await file.text();
+      // Remove BOM if present
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
       pasteText(text);
     }
   } catch(e) {
-    const text = await file.text();
-    pasteText(text);
+    try {
+      var text = await file.text();
+      if (text.charCodeAt(0) === 0xFEFF) text = text.slice(1);
+      pasteText(text);
+    } catch(e2) {
+      showToast('文件导入失败: ' + e2.message, 'error');
+    }
   }
 }
 
@@ -771,6 +783,11 @@ function pasteText(text) {
   showToast('已导入 ' + rows.length + ' 行', 'success');
 }
 
+// ==================== UNDO/REDO ====================
+var _undoStack = [], _redoStack = [];
+function undoAction() { showToast('撤销功能即将上线', 'info'); }
+function redoAction() { showToast('重做功能即将上线', 'info'); }
+
 function confirmImport() {
   if (STATE.importBuffer) STATE.importBuffer = null;
 }
@@ -812,6 +829,99 @@ function exportAsCSV() {
   showToast('已导出 CSV 文件', 'success');
 }
 
+
+
+// ==================== ROW/COLUMN OPERATIONS ====================
+function insertRow() {
+  var pos = STATE.currentCell.row;
+  STATE.data.splice(pos, 0, Array(STATE.cols).fill(''));
+  STATE.rows = STATE.data.length;
+  renderSheet();
+  showToast('已插入行', 'success');
+}
+
+function deleteRow() {
+  var pos = STATE.currentCell.row;
+  if (STATE.data.length <= 1) { showToast('至少保留一行', 'error'); return; }
+  STATE.data.splice(pos, 1);
+  STATE.rows = STATE.data.length;
+  renderSheet();
+  showToast('已删除行', 'success');
+}
+
+function insertColumn() {
+  var pos = STATE.currentCell.col;
+  for (var _r = 0; _r < STATE.rows; _r++) {
+    STATE.data[_r].splice(pos, 0, '');
+  }
+  STATE.cols++;
+  renderSheet();
+  showToast('已插入列', 'success');
+}
+
+function deleteColumn() {
+  var pos = STATE.currentCell.col;
+  if (STATE.cols <= 1) { showToast('至少保留一列', 'error'); return; }
+  for (var _r = 0; _r < STATE.rows; _r++) {
+    STATE.data[_r].splice(pos, 1);
+  }
+  STATE.cols--;
+  renderSheet();
+  showToast('已删除列', 'success');
+}
+
+// ==================== CELL RANGE SELECTION ====================
+var _selStart = null, _selEnd = null, _isSelecting = false;
+
+function clearSelection() {
+  document.querySelectorAll('.cell.range-selected').forEach(function(el) {
+    el.classList.remove('range-selected');
+  });
+  _selStart = null; _selEnd = null;
+}
+
+function updateRangeSelection() {
+  document.querySelectorAll('.cell.range-selected').forEach(function(el) {
+    el.classList.remove('range-selected');
+  });
+  if (!_selStart) return;
+  var r1 = Math.min(_selStart.row, _selEnd ? _selEnd.row : _selStart.row);
+  var r2 = Math.max(_selStart.row, _selEnd ? _selEnd.row : _selStart.row);
+  var c1 = Math.min(_selStart.col, _selEnd ? _selEnd.col : _selStart.col);
+  var c2 = Math.max(_selStart.col, _selEnd ? _selEnd.col : _selStart.col);
+  STATE.selectedCells = [];
+  for (var _r = r1; _r <= r2; _r++) {
+    for (var _c = c1; _c <= c2; _c++) {
+      STATE.selectedCells.push({row: _r, col: _c});
+      var el = document.querySelector('td[data-row="' + _r + '"][data-col="' + _c + '"]');
+      if (el) el.classList.add('range-selected');
+    }
+  }
+}
+
+// Hook mousedown/mousemove/mouseup on sheet for range selection
+function setupRangeSelection() {
+  var container = document.getElementById('sheetContainer');
+  container.addEventListener('mousedown', function(e) {
+    var td = e.target.closest('td');
+    if (!td || !td.dataset) return;
+    var row = parseInt(td.dataset.row), col = parseInt(td.dataset.col);
+    _selStart = {row: row, col: col};
+    _selEnd = {row: row, col: col};
+    _isSelecting = true;
+    updateRangeSelection();
+  });
+  container.addEventListener('mousemove', function(e) {
+    if (!_isSelecting) return;
+    var td = e.target.closest('td');
+    if (!td || !td.dataset) return;
+    _selEnd = {row: parseInt(td.dataset.row), col: parseInt(td.dataset.col)};
+    updateRangeSelection();
+  });
+  document.addEventListener('mouseup', function() {
+    _isSelecting = false;
+  });
+}
 function newSheet() {
   STATE.data = Array.from({ length: 30 }, function(_, ri) {
     const row = Array(STATE.cols).fill('');
@@ -1289,6 +1399,8 @@ function setupEventListeners() {
     });
   }
 
+  setupRangeSelection();
+  
   // Keyboard: Ctrl+S
   document.addEventListener('keydown', function(e) {
     if ((e.ctrlKey || e.metaKey) && e.key === 's') {

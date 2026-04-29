@@ -387,6 +387,7 @@ def _parse_import_file(file_path: str, file_ext: str) -> list:
 
 def _df_to_18_columns(df) -> list:
     """将DataFrame转换为18列格式"""
+    import pandas as pd
     rows = []
     # 获取列名列表
     columns = list(df.columns)
