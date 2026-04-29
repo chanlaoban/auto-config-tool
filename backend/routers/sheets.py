@@ -190,24 +190,12 @@ async def import_file(
         # 解析文件 - 提取需求侧数据（A-E列）
         rows = _parse_import_file(file_path, file_ext)
     except Exception as e:
-        return {"success": False, "data": None, f"error": f"文件解析失败: {str(e)}"}
+        return {"success": False, "data": None, "error": f"文件解析失败: {str(e)}"}
 
+    # 返回rows数组（前端直接可用）
     return {
         "success": True,
-        "data": {
-            "filename": file.filename,
-            "total_rows": len(rows),
-            "columns": {k: v for k, v in [
-                ("A", "序号"), ("B", "设备名称"), ("C", "招标/需求参数"),
-                ("D", "单位"), ("E", "数量"),
-                ("F", ""), ("G", ""),
-                ("H", "产品名称"), ("I", "产品规格"), ("J", "品牌"),
-                ("K", "产品型号"), ("L", "厂家内部型号"), ("M", "数量"),
-                ("N", "单位"), ("O", "产品单价"), ("P", "总价"),
-                ("Q", "备注"), ("R", "不满足参数"),
-            ]},
-            "rows": rows,
-        },
+        "data": rows,
         "error": "",
     }
 
@@ -343,24 +331,43 @@ def _parse_import_file(file_path: str, file_ext: str) -> list:
         rows = _df_to_18_columns(df)
     elif file_ext == ".csv":
         import pandas as pd
-        try:
-            df = pd.read_csv(file_path, dtype=str, encoding="utf-8")
-        except UnicodeDecodeError:
-            df = pd.read_csv(file_path, dtype=str, encoding="gbk")
+        # 尝试多种编码：UTF-8 BOM -> UTF-8 -> GBK -> GB18030
+        encodings = ["utf-8-sig", "utf-8", "gbk", "gb18030", "latin-1"]
+        df = None
+        for enc in encodings:
+            try:
+                df = pd.read_csv(file_path, dtype=str, encoding=enc)
+                break
+            except (UnicodeDecodeError, UnicodeError):
+                continue
+        if df is None:
+            df = pd.read_csv(file_path, dtype=str, encoding="utf-8", errors="replace")
         rows = _df_to_18_columns(df)
     elif file_ext == ".txt":
         with open(file_path, "r", encoding="utf-8", errors="replace") as f:
             lines = f.readlines()
-        # 尝试按制表符或逗号分割
+        # 先检测分隔符：制表符优先，避免中文逗号误拆
+        has_tab = any("\t" in line for line in lines[:10])
         for i, line in enumerate(lines):
             line = line.strip()
             if not line:
                 continue
-            # 尝试多种分隔符
-            if "\t" in line:
+            if has_tab:
                 parts = line.split("\t")
             else:
-                parts = line.split(",")
+                # 智能CSV解析（处理引号内的逗号）
+                parts = []
+                current = ""
+                in_quote = False
+                for ch in line:
+                    if ch == '"':
+                        in_quote = not in_quote
+                    elif ch == "," and not in_quote:
+                        parts.append(current.strip())
+                        current = ""
+                    else:
+                        current += ch
+                parts.append(current.strip())
             
             row = {letter: "" for letter in COLUMN_LETTERS}
             # A=序号, B=设备名称, C=招标/需求参数, D=单位, E=数量

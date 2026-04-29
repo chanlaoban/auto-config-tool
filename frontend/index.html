@@ -369,7 +369,12 @@ html,body{height:100%;overflow:hidden;font-family:Segoe UI,PingFang SC,Microsoft
     <div class="ai-msg bot" id="aiWelcome">你好！我是 AI 配置助手<br><br>查询产品知识库 / 配单建议 / 分析需求</div>
   </div>
   <div class="ai-footer">
-    <div class="ai-footer-row"><input type="text" id="aiInput" placeholder="输入消息 ..." onkeydown="if(event.key==='Enter')sendAIMessage()"><button class="send-btn" onclick="sendAIMessage()"><i class="fa-regular fa-paper-plane"></i> 发送</button></div>
+    <div class="ai-footer-row">
+      <button class="ribbon-btn" onclick="var c=STATE.currentCell;document.getElementById('aiInput').value='读取单元格 '+COLUMNS[c.col]+(c.row+1)+' 的内容: \\n'+STATE.data[c.row][c.col];sendAIMessage()" style="padding:3px 6px;font-size:10px;height:26px;border:1px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;" title="读取当前单元格到AI"><i class="fa-solid fa-table-cells"></i></button>
+      <button class="ribbon-btn" onclick="document.getElementById('aiInput').value='帮我处理以下表格数据，给出建议：\\n'+getTableContext();sendAIMessage()" style="padding:3px 6px;font-size:10px;height:26px;border:1px solid var(--border);border-radius:4px;background:var(--white);cursor:pointer;" title="发送整个表格到AI"><i class="fa-solid fa-table"></i></button>
+      <input type="text" id="aiInput" placeholder="输入消息 ..." onkeydown="if(event.key==='Enter')sendAIMessage()">
+      <button class="send-btn" onclick="sendAIMessage()"><i class="fa-regular fa-paper-plane"></i></button>
+    </div>
     <div class="ai-opacity-row"><label><i class="fa-solid fa-circle-half-stroke"></i></label><input type="range" id="aiOpacitySlider" min="20" max="100" value="100" oninput="setAIOpacity(this.value)"><label id="aiOpacityLabel" style="font-size:10px;width:30px;text-align:right;">100%</label></div>
   </div>
 </div>
@@ -642,11 +647,32 @@ function onCellKeydown(e, row, col) {
 async function pasteFromClipboard() {
   try {
     const text = await navigator.clipboard.readText();
-    const rows = text.split('\n').filter(r => r.trim());
+    var rows = text.split('\n');
+    // Remove trailing empty row if present (from Excel copies)
+    if (rows.length > 0 && rows[rows.length-1].trim() === '') rows.pop();
     if (rows.length === 0) { showToast('剪贴板为空', 'error'); return; }
-    const parsed = rows.map(function(r) {
-      const cells = r.indexOf('\\t') >= 0 ? r.split('\t') : r.split(',');
-      return cells.map(function(c) { return c.trim().replace(/^"|"$/g, ''); });
+    // Detect separator: tabs = Excel/Sheet copy, commas = CSV
+    var hasTab = false;
+    for (var _i = 0; _i < rows.length && _i < 5; _i++) {
+      if (rows[_i].indexOf('\t') >= 0) { hasTab = true; break; }
+    }
+    var parsed = rows.map(function(r) {
+      var cells;
+      if (hasTab) {
+        cells = r.split('\t');
+      } else {
+        // Smart CSV parsing: handle quoted fields with commas inside
+        cells = [];
+        var current = '', inQuote = false;
+        for (var _c = 0; _c < r.length; _c++) {
+          var ch = r[_c];
+          if (ch === '"') { inQuote = !inQuote; }
+          else if (ch === ',' && !inQuote) { cells.push(current.trim()); current = ''; }
+          else { current += ch; }
+        }
+        cells.push(current.trim());
+      }
+      return cells.map(function(c) { return c.replace(/^"|"$/g, ''); });
     });
     parsed.forEach(function(rowData, ri) {
       rowData.forEach(function(val, ci) {
@@ -706,12 +732,31 @@ async function importFile(file) {
 }
 
 function pasteText(text) {
-  const rows = text.split('\n').filter(function(r) { return r.trim(); });
+  var rows = text.split('\n');
+  if (rows.length > 0 && rows[rows.length-1].trim() === '') rows.pop();
+  var hasTab = false;
+  for (var _i = 0; _i < rows.length && _i < 5; _i++) {
+    if (rows[_i].indexOf('\t') >= 0) { hasTab = true; break; }
+  }
   rows.forEach(function(rowData, ri) {
-    const cells = rowData.indexOf('\\t') >= 0 ? rowData.split('\t') : rowData.split(',');
+    var cells;
+    if (hasTab) {
+      cells = rowData.split('\t');
+    } else {
+      cells = [];
+      var current = '', inQuote = false;
+      for (var _c = 0; _c < rowData.length; _c++) {
+        var ch = rowData[_c];
+        if (ch === '"') { inQuote = !inQuote; }
+        else if (ch === ',' && !inQuote) { cells.push(current.trim()); current = ''; }
+        else { current += ch; }
+      }
+      cells.push(current.trim());
+    }
+    cells = cells.map(function(c) { return c.replace(/^"|"$/g, ''); });
     cells.forEach(function(val, ci) {
       if (ci < STATE.cols && ri < STATE.rows) {
-        STATE.data[ri][ci] = val.trim().replace(/^"|"$/g, '');
+        STATE.data[ri][ci] = val;
       }
     });
     STATE.data[ri][0] = String(ri + 1);
@@ -815,6 +860,36 @@ function setAIOpacity(val) {
   document.getElementById('aiOpacityLabel').textContent = val + '%';
 }
 
+function getTableContext() {
+  // Build a text summary of the current table for AI context
+  var ctx = '当前表格共' + STATE.rows + '行' + STATE.cols + '列\n';
+  ctx += '列定义: ' + COLUMNS.join('|') + '\n';
+  ctx += '列名称: ' + COL_NAMES.join('|') + '\n';
+  ctx += '当前活动单元格: ' + COLUMNS[STATE.currentCell.col] + (STATE.currentCell.row+1) + '\n';
+  ctx += '当前模式: ' + ({learn:'学习',semi:'半自动',auto:'全自动'})[STATE.mode] + '模式\n';
+  // Add first 10 rows of data
+  var count = 0;
+  for (var _r = 0; _r < Math.min(STATE.rows, 10); _r++) {
+    var hasData = STATE.data[_r].some(function(c) { return c && c.trim(); });
+    if (!hasData) continue;
+    ctx += '\n行' + (_r+1) + ': ';
+    ctx += STATE.data[_r].map(function(c, _c) { return COLUMNS[_c] + '=' + (c||''); }).join(' | ');
+    count++;
+    if (count >= 5) break;
+  }
+  return ctx;
+}
+
+function insertToCell(text) {
+  var row = STATE.currentCell.row;
+  var col = STATE.currentCell.col;
+  if (row < STATE.rows && col < STATE.cols) {
+    STATE.data[row][col] = text;
+    renderSheet();
+    showToast('已写入 ' + COLUMNS[col] + (row+1), 'success');
+  }
+}
+
 function sendAIMessage() {
   var input = document.getElementById('aiInput');
   var text = input.value.trim();
@@ -826,10 +901,11 @@ function sendAIMessage() {
   body.scrollTop = body.scrollHeight;
   var headers = { 'Content-Type': 'application/json' };
   if (STATE.token) headers['Authorization'] = 'Bearer ' + STATE.token;
+  var promptText = text + '\n\n【表格上下文】\n' + getTableContext();
   fetch(STATE.apiBase + '/api/ai/query', {
     method: 'POST',
     headers: headers,
-    body: JSON.stringify({ prompt: text, mode: STATE.mode, context: JSON.stringify({ currentCell: STATE.currentCell }) }),
+    body: JSON.stringify({ prompt: promptText, mode: STATE.mode, context: '' }),
   })
   .then(function(r) { return r.json(); })
   .then(function(result) {
@@ -837,6 +913,9 @@ function sendAIMessage() {
     if (typing) typing.remove();
     var reply = (result.data && result.data.response) || (result.data && result.data.answer) || '抱歉，AI 暂时无法回答。';
     body.innerHTML += '<div class="ai-msg bot">' + reply + '</div>';
+    body.innerHTML += '<div class="ai-msg" style="align-self:flex-end;display:flex;gap:4px;font-size:11px;">'
+      + '<button onclick="insertToCell(\'' + reply.replace(/'/g,"\\'").substring(0,200) + '\')" style="padding:3px 8px;border:1px solid var(--border);border-radius:4px;background:var(--primary);color:#fff;cursor:pointer;">插入到当前单元格</button>'
+      + '</div>';
     body.scrollTop = body.scrollHeight;
     STATE.history.push({ role: 'user', content: text }, { role: 'assistant', content: reply });
   })
