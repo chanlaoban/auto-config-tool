@@ -34,3 +34,4 @@ Thumbs.db
 
 # Logs
 *.log
+\n# Uploads\nbackend/uploads/
